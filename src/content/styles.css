@@ -1,0 +1,622 @@
+.sp-diagram-card {
+  box-sizing: border-box;
+  margin: 14px 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, Canvas 98%, currentColor 2%), Canvas),
+    Canvas;
+  box-shadow:
+    0 12px 36px color-mix(in srgb, #000 10%, transparent),
+    0 1px 0 color-mix(in srgb, #fff 28%, transparent) inset;
+  color: CanvasText;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.sp-diagram-card *,
+.sp-diagram-card *::before,
+.sp-diagram-card *::after {
+  box-sizing: border-box;
+}
+
+.sp-diagram-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+  background: color-mix(in srgb, Canvas 94%, currentColor 6%);
+}
+
+.sp-diagram-card__heading {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sp-diagram-card__eyebrow {
+  color: color-mix(in srgb, currentColor 58%, transparent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.sp-diagram-card__title {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 720;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-diagram-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.sp-diagram-card__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 5px 10px;
+  border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, Canvas 96%, currentColor 4%);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 620;
+  line-height: 1;
+  text-decoration: none;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease;
+}
+
+.sp-diagram-card__button:hover {
+  border-color: color-mix(in srgb, #2563eb 50%, currentColor 12%);
+  background: color-mix(in srgb, #2563eb 12%, Canvas);
+  transform: translateY(-1px);
+}
+
+.sp-diagram-card__button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  transform: none;
+}
+
+.sp-diagram-card__body {
+  max-width: 100%;
+  min-height: 64px;
+  padding: 18px;
+  overflow: auto;
+  background:
+    radial-gradient(circle at 1px 1px, color-mix(in srgb, currentColor 8%, transparent) 1px, transparent 0) 0 0 / 18px
+      18px,
+    color-mix(in srgb, Canvas 98%, currentColor 2%);
+}
+
+.sp-diagram-card__body svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+.sp-diagram-card__image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border-radius: 10px;
+}
+
+.sp-diagram-card__body--loading,
+.sp-diagram-card__body--error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: color-mix(in srgb, currentColor 72%, transparent);
+  font-size: 13px;
+}
+
+.sp-diagram-card__body--error {
+  color: #b91c1c;
+}
+
+.sp-diagram-card__spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid color-mix(in srgb, currentColor 22%, transparent);
+  border-top-color: #2563eb;
+  border-radius: 999px;
+  animation: sp-spin 800ms linear infinite;
+}
+
+.sp-code-block-with-button {
+  position: relative;
+}
+
+.sp-code-render-button {
+  appearance: none;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 3px 9px;
+  border: 0;
+  border-radius: 6px;
+  background: #ec407a;
+  color: #fff;
+  cursor: pointer;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  margin-inline: 4px;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.sp-code-render-button:hover {
+  background: #db2777;
+}
+
+.sp-code-render-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.sp-code-block-with-button {
+  position: relative;
+}
+
+.sp-code-block-with-button > .sp-code-render-button {
+  position: absolute;
+  z-index: 5;
+  top: 6px;
+  right: 6px;
+}
+
+.sp-code-render-button--plantuml {
+  background: #7c3aed;
+}
+
+.sp-code-render-button--plantuml:hover {
+  background: #6d28d9;
+}
+
+.sp-code-render-button--in-toolbar {
+  margin: 0 4px 0 0;
+  padding: 2px 8px;
+  min-height: 22px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+}
+
+.sp-inline-diagram {
+  display: flex;
+  flex-direction: column;
+  margin: 8px 0;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 6%);
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.sp-inline-diagram__controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.sp-inline-diagram__button {
+  appearance: none;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  min-width: 28px;
+  padding: 4px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #0f172a;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.sp-inline-diagram__button:hover {
+  border-color: #a855f7;
+  background: #f5f3ff;
+  color: #6d28d9;
+}
+
+.sp-inline-diagram__button:active {
+  background: #ede9fe;
+}
+
+.sp-inline-diagram__zoom {
+  min-width: 52px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  user-select: none;
+}
+
+.sp-inline-diagram__viewport {
+  position: relative;
+  max-height: 80vh;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  background:
+    radial-gradient(circle at 1px 1px, rgb(15 23 42 / 7%) 1px, transparent 0) 0 0 / 22px
+      22px,
+    #ffffff;
+}
+
+.sp-inline-diagram__viewport:active {
+  cursor: grabbing;
+}
+
+.sp-inline-diagram__canvas {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 80px;
+  padding: 16px;
+  pointer-events: none;
+  transform-origin: center center;
+  user-select: none;
+  will-change: transform;
+}
+
+.sp-inline-diagram__canvas svg {
+  display: block;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+  user-select: none;
+}
+
+.sp-inline-diagram__canvas--message,
+.sp-inline-diagram__canvas--error {
+  min-height: 120px;
+  color: #475569;
+  font-size: 13px;
+}
+
+.sp-inline-diagram__canvas--error {
+  color: #b91c1c;
+}
+
+.sp-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: color-mix(in srgb, #000 72%, transparent);
+  color: CanvasText;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.sp-viewer *,
+.sp-viewer *::before,
+.sp-viewer *::after {
+  box-sizing: border-box;
+}
+
+.sp-viewer__panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(1200px, 96vw);
+  height: min(820px, 92vh);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, #fff 16%, transparent);
+  border-radius: 18px;
+  background: Canvas;
+  box-shadow: 0 24px 80px color-mix(in srgb, #000 45%, transparent);
+}
+
+.sp-viewer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  background: color-mix(in srgb, Canvas 94%, currentColor 6%);
+}
+
+.sp-viewer__title {
+  margin: 0;
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 750;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-viewer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.sp-viewer__zoom {
+  min-width: 52px;
+  padding: 0 4px;
+  color: color-mix(in srgb, currentColor 68%, transparent);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  user-select: none;
+}
+
+.sp-viewer__viewport {
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  background:
+    radial-gradient(circle at 1px 1px, color-mix(in srgb, currentColor 9%, transparent) 1px, transparent 0) 0 0 / 22px
+      22px,
+    color-mix(in srgb, Canvas 98%, currentColor 2%);
+}
+
+.sp-viewer__viewport:active {
+  cursor: grabbing;
+}
+
+.sp-viewer__canvas {
+  display: grid;
+  width: 100%;
+  min-width: max-content;
+  height: 100%;
+  min-height: max-content;
+  place-items: center;
+  padding: 56px;
+  pointer-events: none;
+  transform-origin: center center;
+  user-select: none;
+  will-change: transform;
+}
+
+.sp-viewer__canvas svg,
+.sp-viewer__image {
+  display: block;
+  max-width: none;
+  max-height: none;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px color-mix(in srgb, #000 14%, transparent);
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.sp-cgpt-btn {
+  appearance: none;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 6px 0 0;
+  padding: 2px 9px;
+  min-height: 22px;
+  border: 1px solid #c084fc;
+  border-radius: 6px;
+  background: #f5f3ff;
+  color: #6d28d9;
+  cursor: pointer;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  text-decoration: none;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.sp-cgpt-btn:hover {
+  background: #ede9fe;
+  border-color: #a855f7;
+  color: #5b21b6;
+}
+
+.sp-cgpt-btn:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.sp-cgpt-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 12px 0 16px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 6%);
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.sp-cgpt-card *,
+.sp-cgpt-card *::before,
+.sp-cgpt-card *::after {
+  box-sizing: border-box;
+}
+
+.sp-cgpt-card__controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.sp-cgpt-card__zoom {
+  min-width: 48px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  user-select: none;
+}
+
+.sp-cgpt-card__button {
+  appearance: none;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  min-width: 26px;
+  padding: 4px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #0f172a;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.sp-cgpt-card__button:hover {
+  border-color: #a855f7;
+  background: #f5f3ff;
+  color: #6d28d9;
+}
+
+.sp-cgpt-card__viewport {
+  position: relative;
+  width: 100%;
+  max-height: 80vh;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  background:
+    radial-gradient(circle at 1px 1px, rgb(15 23 42 / 7%) 1px, transparent 0) 0 0 / 22px
+      22px,
+    #ffffff;
+}
+
+.sp-cgpt-card__viewport:active {
+  cursor: grabbing;
+}
+
+.sp-cgpt-card__canvas {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 100px;
+  padding: 16px;
+  pointer-events: none;
+  transform-origin: center center;
+  user-select: none;
+  will-change: transform;
+}
+
+.sp-cgpt-card__canvas svg {
+  display: block;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+  user-select: none;
+}
+
+.sp-cgpt-card__canvas--message,
+.sp-cgpt-card__canvas--error {
+  min-height: 120px;
+  color: #475569;
+  font-size: 13px;
+}
+
+.sp-cgpt-card__canvas--error {
+  color: #b91c1c;
+}
+
+@keyframes sp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 720px) {
+  .sp-diagram-card__header,
+  .sp-viewer__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sp-diagram-card__actions,
+  .sp-viewer__actions {
+    justify-content: flex-start;
+  }
+
+  .sp-viewer {
+    padding: 10px;
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "Show Pic",
+  "version": "0.1.0",
+  "description": "Render Mermaid and PlantUML diagrams in ChatGPT and Gemini markdown code blocks.",
+  "permissions": ["storage"],
+  "background": {
+    "service_worker": "assets/background.js",
+    "type": "module"
+  },
+  "host_permissions": [
+    "https://www.plantuml.com/*",
+    "http://www.plantuml.com/*",
+    "https://plantuml.com/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://gemini.google.com/*"
+      ],
+      "js": ["content-loader.js"],
+      "css": ["assets/content.css"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "options_page": "options/index.html",
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "sandbox/mermaid.html",
+        "assets/*.js",
+        "assets/sandbox.js"
+      ],
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://gemini.google.com/*"
+      ]
+    }
+  ],
+  "sandbox": {
+    "pages": ["sandbox/mermaid.html"]
+  },
+  "content_security_policy": {
+    "sandbox": "sandbox allow-scripts; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; object-src 'none';"
+  }
+}
