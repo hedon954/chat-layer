@@ -57,25 +57,40 @@ jobs:
           shasum -a 256 "${{ steps.package.outputs.archive }}" \
             | tee "${{ steps.package.outputs.archive }}.sha256"
 
+      - name: Extract release notes from CHANGELOG.md
+        run: |
+          version="${{ steps.version.outputs.value }}"
+          notes_path="release-notes.md"
+          if [ ! -f CHANGELOG.md ]; then
+            echo "_No CHANGELOG.md present; see auto-generated notes below._" > "${notes_path}"
+          else
+            awk -v target="${version}" '
+              BEGIN { capture = 0 }
+              /^## / {
+                if (capture) { exit }
+                if (index($0, "[" target "]") > 0 || index($0, " " target " ") > 0 || index($0, " " target) > 0) {
+                  capture = 1
+                  next
+                }
+              }
+              capture { print }
+            ' CHANGELOG.md > "${notes_path}"
+            if [ ! -s "${notes_path}" ]; then
+              echo "_No CHANGELOG.md section found for ${version}; see auto-generated notes below._" > "${notes_path}"
+            fi
+          fi
+          echo "----- Release notes preview -----"
+          head -60 "${notes_path}"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.value }}
           name: ${{ steps.version.outputs.value }}
           generate_release_notes: true
+          append_body: true
           fail_on_unmatched_files: true
           files: |
             ${{ steps.package.outputs.archive }}
             ${{ steps.package.outputs.archive }}.sha256
-          body: |
-            ## Install (unpacked)
-
-            1. Download `${{ steps.package.outputs.archive }}` from the assets below and extract it.
-            2. Open `chrome://extensions/` and enable **Developer mode** (top-right).
-            3. Click **Load unpacked** and select the extracted folder.
-
-            ## Verify
-
-            ```bash
-            shasum -a 256 -c ${{ steps.package.outputs.archive }}.sha256
-            ```
+          body_path: release-notes.md
