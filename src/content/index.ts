@@ -28,7 +28,7 @@ const CODE_BLOCK_SELECTOR = [
 ].join(",");
 const BUTTON_KEY_ATTRIBUTE = "data-show-pic-button-key";
 const SCAN_DEBOUNCE_MS = 250;
-const CONTENT_SCRIPT_VERSION = "0.2.0-toc-panel";
+const CONTENT_SCRIPT_VERSION = "0.3.0-chatlayer";
 
 const pendingScanRoots = new Set<ParentNode>();
 const observedRoots = new WeakSet<Node>();
@@ -52,7 +52,7 @@ async function start(): Promise<void> {
   document.documentElement.dataset.showPicVersion = CONTENT_SCRIPT_VERSION;
   document.documentElement.dataset.showPicPlatform = PLATFORM;
   console.info(
-    `[Show Pic] ${CONTENT_SCRIPT_VERSION} loaded on ${PLATFORM}. Diagrams render only after clicking a Show Pic button.`
+    `[ChatLayer] ${CONTENT_SCRIPT_VERSION} loaded on ${PLATFORM}. Diagrams render only after clicking a ChatLayer button.`
   );
   cleanupLegacyAutoRenderArtifacts();
 
@@ -343,7 +343,7 @@ async function renderDiagramBlock(
   const settings = await loadSettings();
 
   const liveDiagram = resolveLiveDiagram(block, diagram);
-  console.info("[Show Pic] Rendering diagram", {
+  console.info("[ChatLayer] Rendering diagram", {
     type: liveDiagram.type,
     capturedLength: diagram.source.length,
     liveLength: liveDiagram.source.length,
@@ -356,7 +356,7 @@ async function renderDiagramBlock(
       : undefined;
 
   if (plantUmlUrl) {
-    console.info("[Show Pic] PlantUML request", { url: plantUmlUrl });
+    console.info("[ChatLayer] PlantUML request", { url: plantUmlUrl });
   }
 
   try {
@@ -788,7 +788,7 @@ function downloadSvg(svg: string): void {
   const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
   const link = document.createElement("a");
   link.href = url;
-  link.download = "show-pic-diagram.svg";
+  link.download = "chatlayer-diagram.svg";
   link.click();
   URL.revokeObjectURL(url);
 }

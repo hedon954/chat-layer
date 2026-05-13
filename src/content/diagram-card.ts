@@ -38,7 +38,7 @@ export function createDiagramCard(options: CreateDiagramCardOptions): DiagramCar
 
   const eyebrow = document.createElement("span");
   eyebrow.className = "sp-diagram-card__eyebrow";
-  eyebrow.textContent = "Show Pic";
+  eyebrow.textContent = "ChatLayer";
 
   const title = document.createElement("span");
   title.className = "sp-diagram-card__title";

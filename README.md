@@ -1,8 +1,8 @@
-# Show Pic
+# ChatLayer
 
-Show Pic is a Chrome extension that renders Mermaid and PlantUML diagrams inside chatbot markdown code blocks.
+ChatLayer is a Chrome extension that adds a power-user enhancement layer to AI chat interfaces.
 
-The first supported targets are ChatGPT and Gemini. The extension watches streamed chatbot responses, detects diagram code blocks, waits for them to stabilize, and inserts a rendered preview next to the original source.
+The first supported targets are ChatGPT and Gemini. The extension currently adds rendered Mermaid and PlantUML diagram previews, long-response outlines, and lightweight workflow controls without replacing the original chatbot UI.
 
 ## Supported Sites
 
@@ -33,7 +33,7 @@ make ci
 
 Pre-built archives are attached to every [GitHub Release](../../releases/latest):
 
-1. Download `show-pic-vX.Y.Z.zip` from the latest release and extract it.
+1. Download `chatlayer-vX.Y.Z.zip` from the latest release and extract it.
 2. Open `chrome://extensions/`.
 3. Enable **Developer mode** (top-right).
 4. Click **Load unpacked** and select the extracted folder.
@@ -41,7 +41,7 @@ Pre-built archives are attached to every [GitHub Release](../../releases/latest)
 Verify the download with the bundled checksum:
 
 ```sh
-shasum -a 256 -c show-pic-vX.Y.Z.zip.sha256
+shasum -a 256 -c chatlayer-vX.Y.Z.zip.sha256
 ```
 
 ## Loading in Chrome (from source)
@@ -59,7 +59,7 @@ git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
 
-The `Release` workflow runs CI, packages `dist/` into `show-pic-vX.Y.Z.zip`,
+The `Release` workflow runs CI, packages `dist/` into `chatlayer-vX.Y.Z.zip`,
 generates release notes, and uploads the archive plus its SHA-256 checksum
 to a new GitHub Release. You can also trigger the workflow manually from the
 Actions tab and pass an arbitrary version label.

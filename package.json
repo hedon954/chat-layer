@@ -1,8 +1,8 @@
 {
-  "name": "show-pic",
-  "version": "0.2.0",
+  "name": "chatlayer",
+  "version": "0.3.0",
   "private": true,
-  "description": "Chrome extension that renders Mermaid and PlantUML diagrams in chatbot markdown code blocks.",
+  "description": "Power-user enhancement layer for AI chat interfaces.",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",

@@ -47,7 +47,7 @@ jobs:
         id: package
         run: |
           version="${{ steps.version.outputs.value }}"
-          archive="show-pic-${version}.zip"
+          archive="chatlayer-${version}.zip"
           (cd dist && zip -r "../${archive}" .)
           echo "archive=${archive}" >> "$GITHUB_OUTPUT"
           echo "Created ${archive} ($(du -h "${archive}" | cut -f1))"

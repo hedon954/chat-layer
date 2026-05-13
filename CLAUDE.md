@@ -55,7 +55,7 @@ When preparing a new version, follow these rules:
    - …
 
    ### Install
-   1. Download `show-pic-vX.Y.Z.zip` from the assets below and extract it.
+   1. Download `chatlayer-vX.Y.Z.zip` from the assets below and extract it.
    2. Open `chrome://extensions/` and enable **Developer mode**.
    3. Click **Load unpacked** and select the extracted folder.
 

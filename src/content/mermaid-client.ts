@@ -75,7 +75,7 @@ function ensureSandboxFrame(): Promise<void> {
 
   sandboxFrame = document.createElement("iframe");
   sandboxFrame.tabIndex = -1;
-  sandboxFrame.title = "Show Pic Mermaid renderer";
+  sandboxFrame.title = "ChatLayer Mermaid renderer";
   sandboxFrame.src = chrome.runtime.getURL("sandbox/mermaid.html");
   sandboxFrame.setAttribute("aria-hidden", "true");
   sandboxFrame.style.cssText = [

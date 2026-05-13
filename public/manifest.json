@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Show Pic",
-  "version": "0.2.0",
-  "description": "Render Mermaid and PlantUML diagrams in ChatGPT and Gemini markdown code blocks.",
+  "name": "ChatLayer",
+  "version": "0.3.0",
+  "description": "Add outlines, diagrams, and workflow tools to AI chatbots.",
   "permissions": ["storage"],
   "background": {
     "service_worker": "assets/background.js",

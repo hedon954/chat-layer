@@ -14,7 +14,7 @@ const SCAN_DEBOUNCE_MS = 200;
 const PLANTUML_LANGUAGES = new Set(["plantuml", "puml"]);
 
 export function startChatGptIntegration(): void {
-  console.info("[Show Pic] ChatGPT integration active.");
+  console.info("[ChatLayer] ChatGPT integration active.");
   scheduleScan();
   new MutationObserver(() => scheduleScan()).observe(document.body, {
     childList: true,
@@ -115,7 +115,7 @@ async function handleRenderClick(pre: HTMLElement, button: HTMLButtonElement): P
   const body = findCodeBody(pre);
   const rawSource = extractSource(body);
   const source = normalizePlantUmlSource(rawSource);
-  console.info("[Show Pic ChatGPT] render", {
+  console.info("[ChatLayer ChatGPT] render", {
     rawLength: rawSource.length,
     sourceLength: source.length,
     preview: source.slice(0, 240)
@@ -128,7 +128,7 @@ async function handleRenderClick(pre: HTMLElement, button: HTMLButtonElement): P
   try {
     const settings = await loadSettings();
     const url = await createPlantUmlSvgUrl(source, settings.plantumlServerBaseUrl);
-    console.info("[Show Pic ChatGPT] request", { url });
+    console.info("[ChatLayer ChatGPT] request", { url });
     const svg = await fetchPlantUmlSvg(url);
     card.setSvg(svg);
   } catch (error) {
@@ -303,7 +303,7 @@ function createCard(): DiagramCard {
     const url = URL.createObjectURL(new Blob([latestSvg], { type: "image/svg+xml" }));
     const a = document.createElement("a");
     a.href = url;
-    a.download = "show-pic-diagram.svg";
+    a.download = "chatlayer-diagram.svg";
     a.click();
     URL.revokeObjectURL(url);
   });

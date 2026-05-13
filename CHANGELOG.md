@@ -7,9 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The release workflow extracts the section matching the pushed tag and uses it
 as the GitHub Release body, so each version section should be self-contained.
 
+## [v0.3.0] — 2026-05-13
+
+The extension has been renamed from Show Pic to ChatLayer to better reflect its
+broader direction: a power-user enhancement layer for ChatGPT, Gemini, and other
+AI chatbot interfaces.
+
+### Changed
+
+- Renamed the extension, documentation, options page, viewer page, and release
+  artifact naming from Show Pic to ChatLayer.
+- Updated the package name to `chatlayer` and bumped the extension manifest to
+  version `0.3.0`.
+- Updated the release workflow to publish `chatlayer-vX.Y.Z.zip` artifacts.
+
+### Install
+
+1. Download `chatlayer-v0.3.0.zip` from the assets below and extract it.
+2. Open `chrome://extensions/` and enable **Developer mode**.
+3. Click **Load unpacked** and select the extracted folder.
+
+### Known limitations
+
+- Some internal DOM attributes and extension message identifiers still use the
+  historical `show-pic` prefix for compatibility with existing injected nodes
+  and content-script cleanup logic.
+
 ## [v0.2.0] — 2026-05-13
 
-Show Pic now adds a lightweight floating table of contents for long ChatGPT and
+ChatLayer now adds a lightweight floating table of contents for long ChatGPT and
 Gemini responses, making heading-heavy conversations easier to navigate without
 changing the original chatbot layout.
 
