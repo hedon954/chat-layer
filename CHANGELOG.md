@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The release workflow extracts the section matching the pushed tag and uses it
 as the GitHub Release body, so each version section should be self-contained.
 
+## [v0.3.3] — 2026-05-13
+
+This patch release makes the floating table-of-contents panel more resilient
+and adjustable when users zoom or resize ChatGPT and Gemini pages.
+
+### Added
+
+- Added bottom-corner resize handles to the ChatGPT and Gemini TOC panel.
+- Stored per-platform TOC panel dimensions in `chrome.storage.local` after
+  resizing.
+- Added focused unit tests for TOC position and size constraints.
+
+### Fixed
+
+- Kept the TOC panel inside the viewport when Chrome zoom or window size
+  changes would otherwise move it off-screen.
+- Restored TOC panel position using non-zero fallback dimensions so hidden
+  panels do not calculate invalid bounds.
+- Constrained custom TOC sizes to the current viewport while preserving internal
+  scrolling for long reply outlines.
+
+### Install
+
+1. Download `chatlayer-v0.3.3.zip` from the assets below and extract it.
+2. Open `chrome://extensions/` and enable **Developer mode**.
+3. Click **Load unpacked** and select the extracted folder.
+
+### Known limitations
+
+- TOC resizing is available from the bottom corners of the panel; collapsed
+  panels must be expanded before resizing the content area.
+- ChatGPT and Gemini may change their DOM structures, so TOC selectors may need
+  future platform-specific maintenance.
+
 ## [v0.3.2] — 2026-05-13
 
 This patch release tightens table-of-contents behavior for ChatGPT and Gemini

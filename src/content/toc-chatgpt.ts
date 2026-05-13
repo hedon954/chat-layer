@@ -1,4 +1,5 @@
 import { loadSettings } from "../shared/settings";
+import { constrainTocPosition, constrainTocSize, type TocPosition, type TocSize } from "./toc-position";
 
 type TocHeading = {
   element: HTMLElement;
@@ -12,15 +13,12 @@ type TocMessage = {
   headings: TocHeading[];
 };
 
-type TocPosition = {
-  left: number;
-  top: number;
-};
-
 type TocThemeMode = "auto" | "light" | "dark";
+type ResizeDirection = "sw" | "se";
 
 const TOC_ATTRIBUTE = "data-show-pic-toc";
 const POSITION_KEY = "sp-toc-position";
+const SIZE_KEY = "sp-toc-size";
 const THEME_KEY = "sp-toc-theme";
 const SCAN_DEBOUNCE_MS = 300;
 const URL_CHECK_INTERVAL_MS = 1_000;
@@ -46,6 +44,7 @@ let currentUrl = window.location.href;
 let closedByUser = false;
 let initialized = false;
 let themeMode: TocThemeMode = "auto";
+let resizeTimer: number | undefined;
 
 export async function initChatGptToc(): Promise<void> {
   if (initialized) return;
@@ -56,6 +55,7 @@ export async function initChatGptToc(): Promise<void> {
 
   await waitForDocumentBody();
   createTocShell();
+  await restoreSize();
   await restorePosition();
   await restoreThemeMode();
   observeThemeChanges();
@@ -68,6 +68,9 @@ export async function initChatGptToc(): Promise<void> {
   mutationObserver.observe(document.body, { childList: true, subtree: true, characterData: true });
 
   window.addEventListener("popstate", handleRouteChange);
+  window.addEventListener("resize", handleViewportChange);
+  window.visualViewport?.addEventListener("resize", handleViewportChange);
+  window.visualViewport?.addEventListener("scroll", handleViewportChange);
   urlTimer = window.setInterval(() => {
     if (window.location.href === currentUrl) return;
     handleRouteChange();
@@ -116,7 +119,9 @@ function createTocShell(): void {
   nav = createTocElement("div", "sp-toc-nav");
   content = createTocElement("div", "sp-toc-content");
   body.append(nav, content);
-  panel.append(header, body);
+  const resizeSouthWest = createResizeHandle("sw");
+  const resizeSouthEast = createResizeHandle("se");
+  panel.append(header, body, resizeSouthWest, resizeSouthEast);
 
   trigger = createTocElement("button", "sp-toc-trigger");
   trigger.type = "button";
@@ -127,6 +132,14 @@ function createTocShell(): void {
 
   document.body.append(panel, trigger);
   applyTocTheme();
+}
+
+function createResizeHandle(direction: ResizeDirection): HTMLElement {
+  const handle = createTocElement("div", `sp-toc-resize sp-toc-resize--${direction}`);
+  handle.title = "Resize contents";
+  handle.setAttribute("aria-hidden", "true");
+  handle.addEventListener("pointerdown", (event) => startResize(event, direction, handle));
+  return handle;
 }
 
 function createTocElement<K extends keyof HTMLElementTagNameMap>(
@@ -158,6 +171,7 @@ function openPanel(): void {
   closedByUser = false;
   panel.hidden = false;
   trigger.hidden = true;
+  keepPanelInViewport();
   scheduleScan(0);
 }
 
@@ -205,6 +219,7 @@ function refreshToc(): void {
   if (!closedByUser) {
     panel.hidden = false;
     if (trigger) trigger.hidden = true;
+    keepPanelInViewport();
   } else if (trigger) {
     trigger.hidden = false;
   }
@@ -435,10 +450,24 @@ async function restorePosition(): Promise<void> {
   setPanelPosition(constrainPosition(value.left, value.top));
 }
 
+async function restoreSize(): Promise<void> {
+  if (!panel) return;
+  const stored = await chrome.storage.local.get(SIZE_KEY);
+  const value = stored[SIZE_KEY];
+  if (!isTocSize(value)) return;
+  setPanelSize(constrainSize(value.width, value.height));
+}
+
 function isTocPosition(value: unknown): value is TocPosition {
   if (typeof value !== "object" || value === null) return false;
   const position = value as Partial<TocPosition>;
   return typeof position.left === "number" && typeof position.top === "number";
+}
+
+function isTocSize(value: unknown): value is TocSize {
+  if (typeof value !== "object" || value === null) return false;
+  const size = value as Partial<TocSize>;
+  return typeof size.width === "number" && typeof size.height === "number";
 }
 
 function startDrag(event: PointerEvent, handle: HTMLElement): void {
@@ -469,15 +498,67 @@ function startDrag(event: PointerEvent, handle: HTMLElement): void {
   window.addEventListener("pointerup", up, { once: true });
 }
 
-function constrainPosition(left: number, top: number): TocPosition {
-  const width = panel?.offsetWidth ?? 260;
-  const height = panel?.offsetHeight ?? 120;
-  const maxLeft = Math.max(8, window.innerWidth - width - 8);
-  const maxTop = Math.max(8, window.innerHeight - height - 8);
-  return {
-    left: Math.min(Math.max(8, left), maxLeft),
-    top: Math.min(Math.max(8, top), maxTop)
+function startResize(event: PointerEvent, direction: ResizeDirection, handle: HTMLElement): void {
+  if (!panel || event.button !== 0) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const startRect = panel.getBoundingClientRect();
+  const startRight = startRect.right;
+  const startWidth = startRect.width;
+  const startHeight = startRect.height;
+  const startX = event.clientX;
+  const startY = event.clientY;
+
+  handle.setPointerCapture(event.pointerId);
+  panel.classList.add("sp-toc-panel--resizing");
+
+  const move = (moveEvent: PointerEvent): void => {
+    if (!panel) return;
+    const rawWidth =
+      direction === "sw" ? startWidth + (startX - moveEvent.clientX) : startWidth + (moveEvent.clientX - startX);
+    const rawHeight = startHeight + (moveEvent.clientY - startY);
+    const size = constrainSize(rawWidth, rawHeight);
+    const left = direction === "sw" ? startRight - size.width : startRect.left;
+
+    setPanelSize(size);
+    setPanelPosition(constrainPosition(left, startRect.top));
   };
+
+  const up = (): void => {
+    if (!panel) return;
+    panel.classList.remove("sp-toc-panel--resizing");
+    const current = panel.getBoundingClientRect();
+    void chrome.storage.local.set({
+      [POSITION_KEY]: { left: current.left, top: current.top },
+      [SIZE_KEY]: { width: current.width, height: current.height }
+    });
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", up);
+  };
+
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", up, { once: true });
+}
+
+function constrainPosition(left: number, top: number): TocPosition {
+  return constrainTocPosition(
+    { left, top },
+    { width: window.innerWidth, height: window.innerHeight },
+    getPanelSize()
+  );
+}
+
+function constrainSize(width: number, height: number): TocSize {
+  return constrainTocSize({ width, height }, { width: window.innerWidth, height: window.innerHeight });
+}
+
+function setPanelSize(size: TocSize): void {
+  if (!panel) return;
+  panel.style.width = `${size.width}px`;
+  panel.style.height = `${size.height}px`;
+  panel.style.maxHeight = "none";
 }
 
 function setPanelPosition(position: TocPosition): void {
@@ -485,6 +566,47 @@ function setPanelPosition(position: TocPosition): void {
   panel.style.left = `${position.left}px`;
   panel.style.top = `${position.top}px`;
   panel.style.right = "auto";
+}
+
+function getPanelSize(): TocSize {
+  if (!panel) return { width: 0, height: 0 };
+  const rect = panel.getBoundingClientRect();
+  return {
+    width: rect.width || panel.offsetWidth,
+    height: rect.height || panel.offsetHeight
+  };
+}
+
+function getCurrentPanelPosition(): TocPosition {
+  if (!panel) return { left: 0, top: 0 };
+  const rect = panel.getBoundingClientRect();
+  const left = rect.width > 0 ? rect.left : Number.parseFloat(panel.style.left);
+  const top = rect.height > 0 ? rect.top : Number.parseFloat(panel.style.top);
+  return {
+    left: Number.isFinite(left) ? left : window.innerWidth - 228 - 12,
+    top: Number.isFinite(top) ? top : 80
+  };
+}
+
+function keepPanelInViewport(): void {
+  if (!panel || panel.hidden) return;
+  if (hasCustomPanelSize()) {
+    const size = constrainSize(getPanelSize().width, getPanelSize().height);
+    setPanelSize(size);
+  }
+  setPanelPosition(constrainPosition(getCurrentPanelPosition().left, getCurrentPanelPosition().top));
+}
+
+function hasCustomPanelSize(): boolean {
+  return Boolean(panel?.style.width && panel.style.height);
+}
+
+function handleViewportChange(): void {
+  if (resizeTimer !== undefined) window.clearTimeout(resizeTimer);
+  resizeTimer = window.setTimeout(() => {
+    resizeTimer = undefined;
+    keepPanelInViewport();
+  }, 50);
 }
 
 function handleRouteChange(): void {
@@ -500,6 +622,10 @@ void (() => {
     mutationObserver?.disconnect();
     intersectionObserver?.disconnect();
     themeObserver?.disconnect();
+    window.removeEventListener("resize", handleViewportChange);
+    window.visualViewport?.removeEventListener("resize", handleViewportChange);
+    window.visualViewport?.removeEventListener("scroll", handleViewportChange);
+    if (resizeTimer !== undefined) window.clearTimeout(resizeTimer);
     if (urlTimer !== undefined) window.clearInterval(urlTimer);
   });
 })();
