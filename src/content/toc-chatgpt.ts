@@ -8,6 +8,7 @@ type TocHeading = {
 
 type TocMessage = {
   message: HTMLElement;
+  scrollTarget: HTMLElement;
   headings: TocHeading[];
 };
 
@@ -24,7 +25,7 @@ const THEME_KEY = "sp-toc-theme";
 const SCAN_DEBOUNCE_MS = 300;
 const URL_CHECK_INTERVAL_MS = 1_000;
 const INITIAL_SCAN_DELAY_MS = 550;
-const ASSISTANT_MESSAGE_SELECTOR = '[data-message-author-role="assistant"]';
+const MESSAGE_ROLE_SELECTOR = "[data-message-author-role]";
 const MESSAGE_SCROLL_TARGET_SELECTOR = [
   "article",
   '[data-testid^="conversation-turn-"]',
@@ -211,11 +212,32 @@ function refreshToc(): void {
 
 function collectMessages(): TocMessage[] {
   const messages: TocMessage[] = [];
-  for (const element of Array.from(document.querySelectorAll<HTMLElement>(ASSISTANT_MESSAGE_SELECTOR))) {
+  const seenScrollTargets = new Set<HTMLElement>();
+
+  for (const element of Array.from(document.querySelectorAll<HTMLElement>(MESSAGE_ROLE_SELECTOR))) {
+    if (!isAssistantMessageElement(element)) continue;
+    const scrollTarget = findMessageScrollTarget(element);
+    if (seenScrollTargets.has(scrollTarget)) continue;
+    if (!isVisibleMessageElement(element) || !isVisibleMessageElement(scrollTarget)) continue;
+
+    seenScrollTargets.add(scrollTarget);
     const headings = collectHeadings(element);
-    messages.push({ message: element, headings });
+    messages.push({ message: element, scrollTarget, headings });
   }
   return messages;
+}
+
+function isAssistantMessageElement(element: HTMLElement): boolean {
+  return (
+    element.getAttribute("data-message-author-role") === "assistant" &&
+    !element.closest(`[${TOC_ATTRIBUTE}]`)
+  );
+}
+
+function isVisibleMessageElement(element: HTMLElement): boolean {
+  if (element.hidden || element.getAttribute("aria-hidden") === "true") return false;
+  const rect = element.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
 }
 
 function collectHeadings(message: HTMLElement): TocHeading[] {
@@ -370,7 +392,7 @@ function createMessageGroup(message: TocMessage, messageIndex: number): HTMLElem
 }
 
 function scrollToMessageStart(message: TocMessage, messageIndex: number): void {
-  findMessageScrollTarget(message.message).scrollIntoView({ behavior: "smooth", block: "start" });
+  message.scrollTarget.scrollIntoView({ behavior: "smooth", block: "start" });
   content
     ?.querySelector<HTMLElement>(`.sp-toc-message[data-msg-index="${messageIndex}"]`)
     ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -387,14 +409,14 @@ function observeVisibleMessages(messages: TocMessage[]): void {
         .filter((entry) => entry.isIntersecting)
         .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
       if (!visible) return;
-      const index = messages.findIndex((message) => message.message === visible.target);
+      const index = messages.findIndex((message) => message.scrollTarget === visible.target);
       if (index >= 0) setActiveNavItem(index + 1);
     },
     { threshold: 0.1 }
   );
 
   for (const message of messages) {
-    intersectionObserver.observe(message.message);
+    intersectionObserver.observe(message.scrollTarget);
   }
 }
 

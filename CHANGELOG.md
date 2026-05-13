@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The release workflow extracts the section matching the pushed tag and uses it
 as the GitHub Release body, so each version section should be self-contained.
 
+## [v0.3.2] — 2026-05-13
+
+This patch release tightens table-of-contents behavior for ChatGPT and Gemini
+so reply navigation consistently tracks AI responses rather than incidental
+headings or platform labels.
+
+### Fixed
+
+- ChatGPT reply counting now only includes visible assistant messages and
+  deduplicates nested conversation-turn nodes.
+- ChatGPT reply navigation now scrolls to the start of the AI response instead
+  of the first heading inside that response.
+- Gemini now shows every AI reply in the TOC, including replies without markdown
+  headings, matching the ChatGPT behavior.
+- Gemini reply navigation now scrolls to the start of the AI response from both
+  the message number and the `Reply n` label.
+- Gemini attribution headings such as `Gemini 说`, `Gemini says`, and
+  `Gemini said` are filtered out of TOC entries.
+
+### Install
+
+1. Download `chatlayer-v0.3.2.zip` from the assets below and extract it.
+2. Open `chrome://extensions/` and enable **Developer mode**.
+3. Click **Load unpacked** and select the extracted folder.
+
+### Known limitations
+
+- ChatGPT and Gemini may change their DOM structures, so TOC selectors may need
+  future platform-specific maintenance.
+
 ## [v0.3.1] — 2026-05-13
 
 This patch release adds the ChatLayer extension icon set and wires it into the
