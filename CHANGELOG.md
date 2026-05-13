@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The release workflow extracts the section matching the pushed tag and uses it
 as the GitHub Release body, so each version section should be self-contained.
 
+## [v0.3.1] — 2026-05-13
+
+This patch release adds the ChatLayer extension icon set and wires it into the
+Manifest V3 metadata used by Chrome's extension surfaces.
+
+### Added
+
+- Added ChatLayer icon assets in Chrome extension sizes: 16, 32, 48, and 128
+  pixels, plus a 1024-pixel source-sized export for future packaging needs.
+- Configured the manifest `icons` and browser action `default_icon` entries to
+  use the new ChatLayer artwork.
+- Added the source icon image under `assets/` so the extension icons can be
+  regenerated consistently.
+
+### Install
+
+1. Download `chatlayer-v0.3.1.zip` from the assets below and extract it.
+2. Open `chrome://extensions/` and enable **Developer mode**.
+3. Click **Load unpacked** and select the extracted folder.
+
+### Known limitations
+
+- Chrome may cache extension icons after reloads; remove and reload the unpacked
+  extension if the old icon still appears.
+
 ## [v0.3.0] — 2026-05-13
 
 The extension has been renamed from Show Pic to ChatLayer to better reflect its
