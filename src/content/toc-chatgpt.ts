@@ -25,6 +25,11 @@ const SCAN_DEBOUNCE_MS = 300;
 const URL_CHECK_INTERVAL_MS = 1_000;
 const INITIAL_SCAN_DELAY_MS = 550;
 const ASSISTANT_MESSAGE_SELECTOR = '[data-message-author-role="assistant"]';
+const MESSAGE_SCROLL_TARGET_SELECTOR = [
+  "article",
+  '[data-testid^="conversation-turn-"]',
+  '[data-testid*="conversation-turn"]'
+].join(",");
 
 let panel: HTMLElement | undefined;
 let trigger: HTMLButtonElement | undefined;
@@ -208,9 +213,7 @@ function collectMessages(): TocMessage[] {
   const messages: TocMessage[] = [];
   for (const element of Array.from(document.querySelectorAll<HTMLElement>(ASSISTANT_MESSAGE_SELECTOR))) {
     const headings = collectHeadings(element);
-    if (headings.length > 0) {
-      messages.push({ message: element, headings });
-    }
+    messages.push({ message: element, headings });
   }
   return messages;
 }
@@ -330,10 +333,7 @@ function createNavItem(message: TocMessage, messageIndex: number): HTMLButtonEle
   button.dataset.msgIndex = String(messageIndex);
   button.title = `Reply ${messageIndex}`;
   button.addEventListener("click", () => {
-    message.message.scrollIntoView({ behavior: "smooth", block: "start" });
-    content
-      ?.querySelector<HTMLElement>(`.sp-toc-message[data-msg-index="${messageIndex}"]`)
-      ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    scrollToMessageStart(message, messageIndex);
     setActiveNavItem(messageIndex);
   });
   return button;
@@ -343,8 +343,14 @@ function createMessageGroup(message: TocMessage, messageIndex: number): HTMLElem
   const group = createTocElement("section", "sp-toc-message");
   group.dataset.msgIndex = String(messageIndex);
 
-  const label = createTocElement("div", "sp-toc-msg-label");
+  const label = createTocElement("button", "sp-toc-msg-label");
+  label.type = "button";
   label.textContent = `Reply ${messageIndex}`;
+  label.title = `Go to reply ${messageIndex}`;
+  label.addEventListener("click", () => {
+    scrollToMessageStart(message, messageIndex);
+    setActiveNavItem(messageIndex);
+  });
 
   const items = createTocElement("div", "sp-toc-items");
   for (const heading of message.headings) {
@@ -361,6 +367,17 @@ function createMessageGroup(message: TocMessage, messageIndex: number): HTMLElem
 
   group.append(label, items);
   return group;
+}
+
+function scrollToMessageStart(message: TocMessage, messageIndex: number): void {
+  findMessageScrollTarget(message.message).scrollIntoView({ behavior: "smooth", block: "start" });
+  content
+    ?.querySelector<HTMLElement>(`.sp-toc-message[data-msg-index="${messageIndex}"]`)
+    ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function findMessageScrollTarget(message: HTMLElement): HTMLElement {
+  return message.closest<HTMLElement>(MESSAGE_SCROLL_TARGET_SELECTOR) ?? message;
 }
 
 function observeVisibleMessages(messages: TocMessage[]): void {
