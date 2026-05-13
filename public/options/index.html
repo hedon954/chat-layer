@@ -43,6 +43,16 @@
         font: inherit;
       }
 
+      .checkbox-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .checkbox-row input {
+        width: auto;
+      }
+
       button {
         width: fit-content;
         padding: 10px 14px;
@@ -79,6 +89,10 @@
         <p class="help">
           Use a local or self-hosted server for private diagrams. The diagram source is sent to this server.
         </p>
+        <label class="checkbox-row" for="toc-enabled">
+          <input id="toc-enabled" name="tocEnabled" type="checkbox" />
+          Enable table of contents panel
+        </label>
         <button type="submit">Save Settings</button>
       </form>
       <p id="status" role="status" aria-live="polite"></p>

@@ -6,6 +6,7 @@ const rootDirectory = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   build: {
+    chunkSizeWarningLimit: 1000,
     emptyOutDir: true,
     rollupOptions: {
       input: {

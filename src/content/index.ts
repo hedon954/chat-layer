@@ -4,6 +4,7 @@ import { startChatGptIntegration } from "./chatgpt";
 import { detectDiagram, extractLanguageHints, type DetectedDiagram } from "./detector";
 import { renderMermaidDiagram } from "./mermaid-client";
 import { PLATFORM, shouldRenderDiagram } from "./platform";
+import { initGeminiToc } from "./toc-gemini";
 import type { FetchPlantUmlSvgMessage, FetchPlantUmlSvgResponse } from "../shared/plantuml-render";
 import { createPlantUmlSvgUrl } from "../render/plantuml";
 import { sanitizeSvg } from "../render/svg";
@@ -27,7 +28,7 @@ const CODE_BLOCK_SELECTOR = [
 ].join(",");
 const BUTTON_KEY_ATTRIBUTE = "data-show-pic-button-key";
 const SCAN_DEBOUNCE_MS = 250;
-const CONTENT_SCRIPT_VERSION = "0.1.0-click-to-render";
+const CONTENT_SCRIPT_VERSION = "0.2.0-toc-panel";
 
 const pendingScanRoots = new Set<ParentNode>();
 const observedRoots = new WeakSet<Node>();
@@ -58,6 +59,10 @@ async function start(): Promise<void> {
   if (PLATFORM === "chatgpt") {
     startChatGptIntegration();
     return;
+  }
+
+  if (PLATFORM === "gemini") {
+    void initGeminiToc();
   }
 
   observeRoot(document.body);

@@ -2,10 +2,12 @@ export const DEFAULT_PLANTUML_SERVER_BASE_URL = "https://www.plantuml.com/plantu
 
 export type ExtensionSettings = {
   plantumlServerBaseUrl: string;
+  tocEnabled: boolean;
 };
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {
-  plantumlServerBaseUrl: DEFAULT_PLANTUML_SERVER_BASE_URL
+  plantumlServerBaseUrl: DEFAULT_PLANTUML_SERVER_BASE_URL,
+  tocEnabled: true
 };
 
 export async function loadSettings(): Promise<ExtensionSettings> {
@@ -14,13 +16,15 @@ export async function loadSettings(): Promise<ExtensionSettings> {
   return {
     plantumlServerBaseUrl: normalizePlantUmlServerBaseUrl(
       String(stored.plantumlServerBaseUrl ?? DEFAULT_SETTINGS.plantumlServerBaseUrl)
-    )
+    ),
+    tocEnabled: stored.tocEnabled !== false
   };
 }
 
 export async function saveSettings(settings: ExtensionSettings): Promise<void> {
   await chrome.storage.sync.set({
-    plantumlServerBaseUrl: normalizePlantUmlServerBaseUrl(settings.plantumlServerBaseUrl)
+    plantumlServerBaseUrl: normalizePlantUmlServerBaseUrl(settings.plantumlServerBaseUrl),
+    tocEnabled: settings.tocEnabled
   });
 }
 

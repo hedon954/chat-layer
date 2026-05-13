@@ -5,6 +5,7 @@ import type {
   FetchPlantUmlSvgResponse
 } from "../shared/plantuml-render";
 import { loadSettings } from "../shared/settings";
+import { initChatGptToc } from "./toc-chatgpt";
 
 const BUTTON_CLASS = "sp-cgpt-btn";
 const CARD_CLASS = "sp-cgpt-card";
@@ -19,6 +20,7 @@ export function startChatGptIntegration(): void {
     childList: true,
     subtree: true
   });
+  void initChatGptToc();
 }
 
 let scanTimer: number | undefined;

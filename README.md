@@ -55,11 +55,11 @@ shasum -a 256 -c show-pic-vX.Y.Z.zip.sha256
 ## Cutting a Release
 
 ```sh
-git tag v0.1.0
-git push origin v0.1.0
+git tag vX.Y.Z
+git push origin vX.Y.Z
 ```
 
-The `Release` workflow runs CI, packages `dist/` into `show-pic-v0.1.0.zip`,
+The `Release` workflow runs CI, packages `dist/` into `show-pic-vX.Y.Z.zip`,
 generates release notes, and uploads the archive plus its SHA-256 checksum
 to a new GitHub Release. You can also trigger the workflow manually from the
 Actions tab and pass an arbitrary version label.

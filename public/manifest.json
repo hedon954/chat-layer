@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Show Pic",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Render Mermaid and PlantUML diagrams in ChatGPT and Gemini markdown code blocks.",
   "permissions": ["storage"],
   "background": {

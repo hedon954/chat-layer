@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The release workflow extracts the section matching the pushed tag and uses it
 as the GitHub Release body, so each version section should be self-contained.
 
+## [v0.2.0] — 2026-05-13
+
+Show Pic now adds a lightweight floating table of contents for long ChatGPT and
+Gemini responses, making heading-heavy conversations easier to navigate without
+changing the original chatbot layout.
+
+### Added
+
+- **Floating conversation table of contents.** ChatGPT and Gemini now get
+  independent TOC content modules that extract `h1`-`h6` headings from assistant
+  responses and group them by reply.
+- **Message navigation strip.** The panel includes round numeric buttons for
+  replies with headings, click-to-scroll behavior, and active-message tracking
+  through `IntersectionObserver`.
+- **Draggable persistent panel.** Panel position is constrained to the viewport
+  and stored per platform in `chrome.storage.local`.
+- **Panel controls.** Users can collapse, close, and reopen the TOC panel from a
+  floating trigger.
+- **Theme controls.** The TOC follows the host ChatGPT/Gemini theme by default
+  and includes an Auto/Light/Dark toggle with per-platform persistence.
+- **Options toggle.** The options page now exposes an "Enable table of contents
+  panel" checkbox backed by the `tocEnabled` setting.
+
+### Changed
+
+- Removed the previous `max-height: 80vh` cap from inline diagram viewports so
+  tall diagrams can use their natural height.
+- Raised Vite's chunk-size warning threshold to 1000 kB to avoid noisy warnings
+  from the bundled Mermaid dependency.
+- Translated the TOC implementation plan to English in `docs/plans/toc.md`.
+
+### Install
+
+1. Download `show-pic-v0.2.0.zip` from the assets below and extract it.
+2. Open `chrome://extensions/` and enable **Developer mode**.
+3. Click **Load unpacked** and select the extracted folder.
+
+### Known limitations
+
+- ChatGPT and Gemini DOM structures may evolve; the TOC intentionally uses
+  platform-specific content modules so selectors can be adjusted independently.
+- The default PlantUML server still sends diagram source over the network; for
+  private content, configure a self-hosted server in the options page.
+
 ## [v0.1.0] — 2026-05-13
 
 Initial public release. Show Pic is a Chrome (Manifest V3) extension that
