@@ -3,9 +3,9 @@
 <p align="center">
   <img src="assets/chatlayer.png" width="96" height="96" alt="ChatLayer icon">
 </p>
-> [!IMPORTANT]
->
-> ChatLayer adds a small power-user layer to ChatGPT and Gemini: reply outlines, diagram rendering, and lightweight navigation without replacing the original UI.
+
+ChatLayer adds a small power-user layer to ChatGPT and Gemini: reply outlines,
+diagram rendering, and lightweight navigation without replacing the original UI.
 
 <p>
   <img src="assets/gemini-snapshot.jpg" alt="ChatLayer table of contents panel on Gemini" width="860">
