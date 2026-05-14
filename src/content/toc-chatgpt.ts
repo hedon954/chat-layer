@@ -517,20 +517,20 @@ function estimateScrollDirection(scroller: Element, target: HTMLElement): number
 
 function scrollToHeading(scrollTarget: HTMLElement, heading: CachedHeading): void {
   if (heading.element && isElementRendered(heading.element)) {
-    heading.element.scrollIntoView({ block: "start" });
+    heading.element.scrollIntoView({ block: "center" });
     return;
   }
   const scroller = findScrollableAncestor(scrollTarget);
   const dir = estimateScrollDirection(scroller, scrollTarget);
   if (isElementRendered(scrollTarget)) {
-    scrollTarget.scrollIntoView({ block: "start" });
+    scrollTarget.scrollIntoView({ block: "center" });
   }
   seekHeading(scroller, scrollTarget, heading, dir, 0, -1);
 }
 
 function scrollToMessageStart(entry: CachedEntry, messageIndex: number): void {
   if (isElementRendered(entry.scrollTarget)) {
-    entry.scrollTarget.scrollIntoView({ block: "start" });
+    entry.scrollTarget.scrollIntoView({ block: "center" });
     content
       ?.querySelector<HTMLElement>(`.sp-toc-message[data-msg-index="${messageIndex}"]`)
       ?.scrollIntoView({ block: "nearest" });
@@ -553,7 +553,7 @@ function seekElement(scroller: Element, target: HTMLElement, direction: number, 
 
   const step = (): void => {
     if (isElementRendered(target)) {
-      target.scrollIntoView({ block: "start" });
+      target.scrollIntoView({ block: "center" });
       onFound();
       return;
     }
@@ -592,7 +592,7 @@ function seekHeading(
     const found = findHeadingByText(document.body, heading.text, heading.level);
     if (found) {
       heading.element = found;
-      found.scrollIntoView({ block: "start" });
+      found.scrollIntoView({ block: "center" });
       return;
     }
     if (attempt >= MAX) return;
@@ -600,7 +600,7 @@ function seekHeading(
     const currentTop = scroller.scrollTop;
     if (currentTop === prevTop && attempt > 0) {
       if (direction > 0) {
-        if (isElementRendered(scrollTarget)) scrollTarget.scrollIntoView({ block: "start" });
+        if (isElementRendered(scrollTarget)) scrollTarget.scrollIntoView({ block: "center" });
         seekHeading(scroller, scrollTarget, heading, -1, attempt + 1, -1);
       }
       return;
@@ -672,7 +672,7 @@ function observeHeadingHighlight(entries: CachedEntry[]): void {
         if (msgIndex) setActiveNavItem(Number(msgIndex));
       }
     },
-    { rootMargin: "0px 0px -60% 0px" }
+    { rootMargin: "-45% 0px -45% 0px", threshold: 0 }
   );
 
   for (const entry of entries) {
