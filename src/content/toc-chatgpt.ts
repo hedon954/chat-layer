@@ -503,16 +503,26 @@ function scrollToHeading(scrollTarget: HTMLElement, heading: CachedHeading): voi
     return;
   }
   scrollTarget.scrollIntoView({ behavior: "smooth", block: "start" });
+  retryFindAndScroll(scrollTarget, heading, 0);
+}
+
+function retryFindAndScroll(scrollTarget: HTMLElement, heading: CachedHeading, attempt: number): void {
+  const MAX_ATTEMPTS = 6;
+  const RETRY_MS = 300;
+
   window.setTimeout(() => {
-    const found = findHeadingInContainer(scrollTarget, heading.text, heading.level);
+    const found = findHeadingByText(scrollTarget, heading.text, heading.level)
+      ?? findHeadingByText(document.body, heading.text, heading.level);
     if (found) {
       heading.element = found;
       found.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else if (attempt < MAX_ATTEMPTS) {
+      retryFindAndScroll(scrollTarget, heading, attempt + 1);
     }
-  }, 500);
+  }, RETRY_MS);
 }
 
-function findHeadingInContainer(container: HTMLElement, text: string, level: number): HTMLElement | null {
+function findHeadingByText(container: HTMLElement, text: string, level: number): HTMLElement | null {
   for (const el of Array.from(container.querySelectorAll<HTMLElement>(`h${level}`))) {
     if (el.closest(`[${TOC_ATTRIBUTE}]`)) continue;
     if (normalizeHeadingText(el.textContent ?? "") === text) return el;
