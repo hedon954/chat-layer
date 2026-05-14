@@ -662,8 +662,12 @@ function handleViewportChange(): void {
   }, 50);
 }
 
-function countTocItems(): number {
+function countDisplayedTocItems(): number {
   return content?.querySelectorAll(".sp-toc-item").length ?? 0;
+}
+
+function countPageHeadings(): number {
+  return collectMessages().reduce((sum, m) => sum + m.headings.length, 0);
 }
 
 function scheduleProgressiveRescan(): void {
@@ -671,10 +675,8 @@ function scheduleProgressiveRescan(): void {
   progressiveTimers = [];
 
   for (const delay of [2_000, 5_000]) {
-    const before = countTocItems();
     const timer = window.setTimeout(() => {
-      const after = countTocItems();
-      if (after !== before) refreshToc();
+      if (countPageHeadings() !== countDisplayedTocItems()) refreshToc();
     }, delay);
     progressiveTimers.push(timer);
   }
