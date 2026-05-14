@@ -497,14 +497,103 @@ function createMessageGroup(entry: CachedEntry, messageIndex: number): HTMLEleme
   return group;
 }
 
+function isElementRendered(el: HTMLElement): boolean {
+  if (!el.isConnected) return false;
+  const rect = el.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
+}
+
 function scrollToHeading(scrollTarget: HTMLElement, heading: CachedHeading): void {
-  if (heading.element?.isConnected) {
-    heading.element.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (heading.element && isElementRendered(heading.element)) {
+    heading.element.scrollIntoView({ block: "start" });
     return;
   }
   const scroller = findScrollableAncestor(scrollTarget);
-  scrollTarget.scrollIntoView({ block: "start" });
-  progressiveScrollSearch(scroller, scrollTarget, heading, 0, -1);
+  if (isElementRendered(scrollTarget)) {
+    scrollTarget.scrollIntoView({ block: "start" });
+  }
+  seekHeading(scroller, scrollTarget, heading, 1, 0, -1);
+}
+
+function scrollToMessageStart(entry: CachedEntry, messageIndex: number): void {
+  if (isElementRendered(entry.scrollTarget)) {
+    entry.scrollTarget.scrollIntoView({ block: "start" });
+    content
+      ?.querySelector<HTMLElement>(`.sp-toc-message[data-msg-index="${messageIndex}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+    return;
+  }
+  const scroller = findScrollableAncestor(entry.scrollTarget);
+  seekElement(scroller, entry.scrollTarget, () => {
+    content
+      ?.querySelector<HTMLElement>(`.sp-toc-message[data-msg-index="${messageIndex}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  });
+}
+
+function seekElement(scroller: Element, target: HTMLElement, onFound: () => void): void {
+  let direction = 1;
+  let attempt = 0;
+  let prevTop = -1;
+  let boundaryHits = 0;
+
+  const step = (): void => {
+    if (isElementRendered(target)) {
+      target.scrollIntoView({ block: "start" });
+      onFound();
+      return;
+    }
+    if (attempt >= 40) return;
+    attempt++;
+
+    const currentTop = scroller.scrollTop;
+    if (currentTop === prevTop) {
+      boundaryHits++;
+      if (boundaryHits >= 2) {
+        if (direction === 1) { direction = -1; boundaryHits = 0; }
+        else return;
+      }
+    } else {
+      boundaryHits = 0;
+    }
+    prevTop = currentTop;
+    scroller.scrollBy({ top: direction * scroller.clientHeight * 0.7 });
+    window.setTimeout(step, 150);
+  };
+  window.setTimeout(step, 150);
+}
+
+function seekHeading(
+  scroller: Element,
+  scrollTarget: HTMLElement,
+  heading: CachedHeading,
+  direction: number,
+  attempt: number,
+  prevTop: number
+): void {
+  const MAX = 40;
+  const STEP_MS = 150;
+
+  window.setTimeout(() => {
+    const found = findHeadingByText(document.body, heading.text, heading.level);
+    if (found) {
+      heading.element = found;
+      found.scrollIntoView({ block: "start" });
+      return;
+    }
+    if (attempt >= MAX) return;
+
+    const currentTop = scroller.scrollTop;
+    if (currentTop === prevTop && attempt > 0) {
+      if (direction === 1) {
+        if (isElementRendered(scrollTarget)) scrollTarget.scrollIntoView({ block: "start" });
+        seekHeading(scroller, scrollTarget, heading, -1, attempt + 1, -1);
+      }
+      return;
+    }
+    scroller.scrollBy({ top: direction * scroller.clientHeight * 0.7 });
+    seekHeading(scroller, scrollTarget, heading, direction, attempt + 1, currentTop);
+  }, STEP_MS);
 }
 
 function findScrollableAncestor(el: HTMLElement): Element {
@@ -519,47 +608,12 @@ function findScrollableAncestor(el: HTMLElement): Element {
   return document.documentElement;
 }
 
-function progressiveScrollSearch(
-  scroller: Element,
-  scrollTarget: HTMLElement,
-  heading: CachedHeading,
-  attempt: number,
-  prevScrollTop: number
-): void {
-  const MAX_ATTEMPTS = 30;
-  const STEP_MS = 150;
-
-  window.setTimeout(() => {
-    const found = findHeadingByText(document.body, heading.text, heading.level);
-    if (found) {
-      heading.element = found;
-      found.scrollIntoView({ behavior: "smooth", block: "start" });
-      return;
-    }
-
-    if (attempt >= MAX_ATTEMPTS) return;
-
-    const currentTop = scroller.scrollTop;
-    if (currentTop === prevScrollTop && attempt > 0) return;
-
-    scroller.scrollBy({ top: scroller.clientHeight * 0.7 });
-    progressiveScrollSearch(scroller, scrollTarget, heading, attempt + 1, currentTop);
-  }, STEP_MS);
-}
-
 function findHeadingByText(container: HTMLElement, text: string, level: number): HTMLElement | null {
   for (const el of Array.from(container.querySelectorAll<HTMLElement>(`h${level}`))) {
     if (el.closest(`[${TOC_ATTRIBUTE}]`)) continue;
     if (normalizeHeadingText(el.textContent ?? "") === text) return el;
   }
   return null;
-}
-
-function scrollToMessageStart(entry: CachedEntry, messageIndex: number): void {
-  entry.scrollTarget.scrollIntoView({ behavior: "smooth", block: "start" });
-  content
-    ?.querySelector<HTMLElement>(`.sp-toc-message[data-msg-index="${messageIndex}"]`)
-    ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 function findMessageScrollTarget(message: HTMLElement): HTMLElement {
