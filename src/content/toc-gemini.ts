@@ -54,6 +54,7 @@ let currentUrl = window.location.href;
 let closedByUser = false;
 let initialized = false;
 let themeMode: TocThemeMode = "auto";
+let lastTocFingerprint = "";
 let resizeTimer: number | undefined;
 
 export async function initGeminiToc(): Promise<void> {
@@ -111,7 +112,7 @@ function createTocShell(): void {
   refreshButton.title = "Refresh contents";
   refreshButton.addEventListener("click", () => {
     refreshButton.classList.add("sp-toc-refresh--spinning");
-    refreshToc();
+    refreshToc(true);
     window.setTimeout(() => refreshButton.classList.remove("sp-toc-refresh--spinning"), 400);
   });
 
@@ -214,10 +215,21 @@ function scheduleScan(delay: number): void {
   }, delay);
 }
 
-function refreshToc(): void {
+function buildTocFingerprint(messages: TocMessage[]): string {
+  return messages
+    .map((m) => m.headings.map((h) => `${h.level}:${h.text}`).join("\n"))
+    .join("\n\n");
+}
+
+function refreshToc(force = false): void {
   if (!panel || !nav || !content) return;
 
   const messages = collectMessages();
+  const fingerprint = buildTocFingerprint(messages);
+
+  if (!force && fingerprint === lastTocFingerprint) return;
+  lastTocFingerprint = fingerprint;
+
   intersectionObserver?.disconnect();
   intersectionObserver = undefined;
   headingObserver?.disconnect();
@@ -662,6 +674,7 @@ function handleViewportChange(): void {
 
 function handleRouteChange(): void {
   currentUrl = window.location.href;
+  lastTocFingerprint = "";
   intersectionObserver?.disconnect();
   headingObserver?.disconnect();
   headingObserver = undefined;
