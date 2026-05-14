@@ -282,7 +282,10 @@ function refreshToc(force = false): void {
   const entries = buildOrderedEntries();
   const fingerprint = buildTocFingerprint(entries);
 
-  if (!force && fingerprint === lastTocFingerprint) return;
+  if (!force && fingerprint === lastTocFingerprint) {
+    reconnectHeadingObserver(entries);
+    return;
+  }
   lastTocFingerprint = fingerprint;
 
   intersectionObserver?.disconnect();
@@ -633,6 +636,25 @@ function findHeadingByText(container: HTMLElement, text: string, level: number):
 
 function findResponseScrollTarget(message: HTMLElement): HTMLElement {
   return message.closest<HTMLElement>(RESPONSE_SCROLL_TARGET_SELECTOR) ?? message;
+}
+
+function reconnectHeadingObserver(entries: CachedEntry[]): void {
+  headingObserver?.disconnect();
+  headingObserver = undefined;
+  headingToButtonMap.clear();
+
+  if (!content) return;
+  for (const [i, entry] of entries.entries()) {
+    const section = content.querySelector<HTMLElement>(`.sp-toc-message[data-msg-index="${i + 1}"]`);
+    if (!section) continue;
+    const buttons = Array.from(section.querySelectorAll<HTMLButtonElement>(".sp-toc-item"));
+    for (let j = 0; j < entry.headings.length && j < buttons.length; j++) {
+      if (entry.headings[j].element?.isConnected) {
+        headingToButtonMap.set(entry.headings[j].element!, buttons[j]);
+      }
+    }
+  }
+  observeHeadingHighlight(entries);
 }
 
 function observeHeadingHighlight(entries: CachedEntry[]): void {
