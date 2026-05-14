@@ -42,7 +42,6 @@ const headingToButtonMap = new Map<Element, HTMLButtonElement>();
 let themeObserver: MutationObserver | undefined;
 let scanTimer: number | undefined;
 let urlTimer: number | undefined;
-let progressiveTimers: number[] = [];
 let currentUrl = window.location.href;
 let closedByUser = false;
 let initialized = false;
@@ -63,7 +62,6 @@ export async function initChatGptToc(): Promise<void> {
   await restoreThemeMode();
   observeThemeChanges();
   scheduleScan(INITIAL_SCAN_DELAY_MS);
-  scheduleProgressiveRescan();
 
   mutationObserver = new MutationObserver((records) => {
     if (records.every((record) => isTocMutation(record))) return;
@@ -658,26 +656,6 @@ function handleViewportChange(): void {
   }, 50);
 }
 
-function countDisplayedTocItems(): number {
-  return content?.querySelectorAll(".sp-toc-item").length ?? 0;
-}
-
-function countPageHeadings(): number {
-  return collectMessages().reduce((sum, m) => sum + m.headings.length, 0);
-}
-
-function scheduleProgressiveRescan(): void {
-  for (const timer of progressiveTimers) window.clearTimeout(timer);
-  progressiveTimers = [];
-
-  for (const delay of [2_000, 5_000]) {
-    const timer = window.setTimeout(() => {
-      if (countPageHeadings() !== countDisplayedTocItems()) refreshToc();
-    }, delay);
-    progressiveTimers.push(timer);
-  }
-}
-
 function handleRouteChange(): void {
   currentUrl = window.location.href;
   intersectionObserver?.disconnect();
@@ -687,7 +665,6 @@ function handleRouteChange(): void {
   nav?.replaceChildren();
   content?.replaceChildren();
   scheduleScan(600);
-  scheduleProgressiveRescan();
 }
 
 void (() => {
@@ -703,7 +680,5 @@ void (() => {
     window.visualViewport?.removeEventListener("scroll", handleViewportChange);
     if (resizeTimer !== undefined) window.clearTimeout(resizeTimer);
     if (urlTimer !== undefined) window.clearInterval(urlTimer);
-    for (const timer of progressiveTimers) window.clearTimeout(timer);
-    progressiveTimers = [];
   });
 })();
