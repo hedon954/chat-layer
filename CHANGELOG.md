@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The release workflow extracts the section matching the pushed tag and uses it
 as the GitHub Release body, so each version section should be self-contained.
 
+## [v0.4.1] — 2026-05-14
+
+This patch release fixes TOC navigation consistency after v0.4.0 by separating
+reply-level and heading-level scroll alignment behavior.
+
+### Highlights
+
+- Fixed a regression where clicking `Reply N` could land at an unexpected
+  viewport position after center-alignment changes.
+- Restored reply navigation to align at the top of the corresponding response.
+- Kept heading navigation center-aligned so heading highlight behavior remains
+  visually consistent with the active reading zone.
+
+### Tooling
+
+- Synced release versioning to `0.4.1` in both `package.json` and
+  `public/manifest.json`.
+- Re-ran full CI (`make ci`: typecheck, lint, tests, build) for release
+  validation.
+
+### Install
+
+1. Download `chatlayer-v0.4.1.zip` from the assets below and extract it.
+2. Open `chrome://extensions/` and enable **Developer mode**.
+3. Click **Load unpacked** and select the extracted folder.
+
+### Known limitations
+
+- Heading highlight still depends on `IntersectionObserver`; virtualized
+  headings cannot be highlighted until re-rendered by the host page.
+- Extremely long conversations may still hit the finite progressive
+  scroll-search budget before a virtualized target heading appears.
+
 ## [v0.4.0] — 2026-05-14
 
 Major improvements to the floating table-of-contents panel: manual refresh,
