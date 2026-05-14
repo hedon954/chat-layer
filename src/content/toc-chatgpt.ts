@@ -13,6 +13,17 @@ type TocMessage = {
   headings: TocHeading[];
 };
 
+type CachedHeading = {
+  level: number;
+  text: string;
+  element: HTMLElement | null;
+};
+
+type CachedEntry = {
+  scrollTarget: HTMLElement;
+  headings: CachedHeading[];
+};
+
 type TocThemeMode = "auto" | "light" | "dark";
 type ResizeDirection = "sw" | "se";
 
@@ -37,6 +48,9 @@ let nav: HTMLElement | undefined;
 let content: HTMLElement | undefined;
 let mutationObserver: MutationObserver | undefined;
 let intersectionObserver: IntersectionObserver | undefined;
+let headingObserver: IntersectionObserver | undefined;
+const headingToButtonMap = new Map<Element, HTMLButtonElement>();
+const messageCache = new Map<HTMLElement, CachedEntry>();
 let themeObserver: MutationObserver | undefined;
 let scanTimer: number | undefined;
 let urlTimer: number | undefined;
@@ -44,6 +58,7 @@ let currentUrl = window.location.href;
 let closedByUser = false;
 let initialized = false;
 let themeMode: TocThemeMode = "auto";
+let lastTocFingerprint = "";
 let resizeTimer: number | undefined;
 
 export async function initChatGptToc(): Promise<void> {
@@ -94,6 +109,17 @@ function createTocShell(): void {
   title.textContent = "Contents";
 
   const actions = createTocElement("div", "sp-toc-actions");
+
+  const refreshButton = createTocElement("button", "sp-toc-refresh");
+  refreshButton.type = "button";
+  refreshButton.textContent = "↻";
+  refreshButton.title = "Refresh contents";
+  refreshButton.addEventListener("click", () => {
+    refreshButton.classList.add("sp-toc-refresh--spinning");
+    refreshToc(true);
+    window.setTimeout(() => refreshButton.classList.remove("sp-toc-refresh--spinning"), 400);
+  });
+
   themeButton = createTocElement("button", "sp-toc-theme");
   themeButton.type = "button";
   themeButton.addEventListener("click", () => {
@@ -111,7 +137,7 @@ function createTocShell(): void {
   closeButton.textContent = "×";
   closeButton.title = "Hide contents";
   closeButton.addEventListener("click", closePanel);
-  actions.append(themeButton, collapseButton, closeButton);
+  actions.append(refreshButton, themeButton, collapseButton, closeButton);
   header.append(title, actions);
   header.addEventListener("pointerdown", (event) => startDrag(event, header));
 
@@ -193,28 +219,89 @@ function scheduleScan(delay: number): void {
   }, delay);
 }
 
-function refreshToc(): void {
+function buildTocFingerprint(entries: CachedEntry[]): string {
+  return entries
+    .map((e) => e.headings.map((h) => `${h.level}:${h.text}`).join("\n"))
+    .join("\n\n");
+}
+
+function mergeFreshIntoCache(freshMessages: TocMessage[]): void {
+  for (const msg of freshMessages) {
+    const existing = messageCache.get(msg.scrollTarget);
+    if (existing) {
+      const freshMap = new Map(msg.headings.map((h) => [`${h.level}\0${h.text}`, h.element]));
+      for (const cached of existing.headings) {
+        const key = `${cached.level}\0${cached.text}`;
+        const freshEl = freshMap.get(key);
+        if (freshEl) {
+          cached.element = freshEl;
+          freshMap.delete(key);
+        } else if (cached.element && !cached.element.isConnected) {
+          cached.element = null;
+        }
+      }
+      for (const [key, el] of freshMap) {
+        const [level, text] = key.split("\0");
+        existing.headings.push({ level: Number(level), text, element: el });
+      }
+    } else {
+      messageCache.set(msg.scrollTarget, {
+        scrollTarget: msg.scrollTarget,
+        headings: msg.headings.map((h) => ({ level: h.level, text: h.text, element: h.element }))
+      });
+    }
+  }
+
+  for (const [target] of messageCache) {
+    if (!target.isConnected) messageCache.delete(target);
+  }
+}
+
+function buildOrderedEntries(): CachedEntry[] {
+  return Array.from(messageCache.values())
+    .sort((a, b) => {
+      const pos = a.scrollTarget.compareDocumentPosition(b.scrollTarget);
+      if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return -1;
+      if (pos & Node.DOCUMENT_POSITION_PRECEDING) return 1;
+      return 0;
+    });
+}
+
+function refreshToc(force = false): void {
   if (!panel || !nav || !content) return;
 
-  const messages = collectMessages();
+  mergeFreshIntoCache(collectMessages());
+  const entries = buildOrderedEntries();
+  const fingerprint = buildTocFingerprint(entries);
+
+  if (!force && fingerprint === lastTocFingerprint) {
+    reconnectHeadingObserver(entries);
+    return;
+  }
+  lastTocFingerprint = fingerprint;
+
   intersectionObserver?.disconnect();
   intersectionObserver = undefined;
+  headingObserver?.disconnect();
+  headingObserver = undefined;
+  headingToButtonMap.clear();
   nav.replaceChildren();
   content.replaceChildren();
 
-  if (messages.length === 0) {
+  if (entries.length === 0) {
     panel.hidden = true;
     if (trigger) trigger.hidden = true;
     return;
   }
 
-  for (const [index, message] of messages.entries()) {
+  for (const [index, entry] of entries.entries()) {
     const messageIndex = index + 1;
-    nav.append(createNavItem(message, messageIndex));
-    content.append(createMessageGroup(message, messageIndex));
+    nav.append(createNavItem(entry, messageIndex));
+    content.append(createMessageGroup(entry, messageIndex));
   }
 
-  observeVisibleMessages(messages);
+  observeVisibleMessages(entries);
+  observeHeadingHighlight(entries);
 
   if (!closedByUser) {
     panel.hidden = false;
@@ -236,7 +323,7 @@ function collectMessages(): TocMessage[] {
     if (!isVisibleMessageElement(element) || !isVisibleMessageElement(scrollTarget)) continue;
 
     seenScrollTargets.add(scrollTarget);
-    const headings = collectHeadings(element);
+    const headings = collectHeadings(scrollTarget);
     messages.push({ message: element, scrollTarget, headings });
   }
   return messages;
@@ -255,12 +342,13 @@ function isVisibleMessageElement(element: HTMLElement): boolean {
   return rect.width > 0 && rect.height > 0;
 }
 
-function collectHeadings(message: HTMLElement): TocHeading[] {
+function collectHeadings(container: HTMLElement): TocHeading[] {
   const headings: TocHeading[] = [];
-  for (const heading of Array.from(message.querySelectorAll<HTMLElement>("h1,h2,h3,h4,h5,h6"))) {
+  for (const heading of Array.from(container.querySelectorAll<HTMLElement>("h1,h2,h3,h4,h5,h6"))) {
     if (heading.closest(`[${TOC_ATTRIBUTE}]`)) continue;
     const text = normalizeHeadingText(heading.textContent ?? "");
     if (!text) continue;
+    if (isChatGptAttributionHeading(text)) continue;
     headings.push({
       element: heading,
       level: Number(heading.tagName.slice(1)),
@@ -269,6 +357,10 @@ function collectHeadings(message: HTMLElement): TocHeading[] {
   }
 
   return headings;
+}
+
+function isChatGptAttributionHeading(text: string): boolean {
+  return /^ChatGPT\s*(?:说|says|said)[：:]?$/iu.test(text);
 }
 
 function normalizeHeadingText(text: string): string {
@@ -363,20 +455,20 @@ function readRgbLuminance(value: string): number | null {
   return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
 }
 
-function createNavItem(message: TocMessage, messageIndex: number): HTMLButtonElement {
+function createNavItem(entry: CachedEntry, messageIndex: number): HTMLButtonElement {
   const button = createTocElement("button", "sp-toc-nav-item");
   button.type = "button";
   button.textContent = String(messageIndex);
   button.dataset.msgIndex = String(messageIndex);
   button.title = `Reply ${messageIndex}`;
   button.addEventListener("click", () => {
-    scrollToMessageStart(message, messageIndex);
+    scrollToMessageStart(entry, messageIndex);
     setActiveNavItem(messageIndex);
   });
   return button;
 }
 
-function createMessageGroup(message: TocMessage, messageIndex: number): HTMLElement {
+function createMessageGroup(entry: CachedEntry, messageIndex: number): HTMLElement {
   const group = createTocElement("section", "sp-toc-message");
   group.dataset.msgIndex = String(messageIndex);
 
@@ -385,20 +477,21 @@ function createMessageGroup(message: TocMessage, messageIndex: number): HTMLElem
   label.textContent = `Reply ${messageIndex}`;
   label.title = `Go to reply ${messageIndex}`;
   label.addEventListener("click", () => {
-    scrollToMessageStart(message, messageIndex);
+    scrollToMessageStart(entry, messageIndex);
     setActiveNavItem(messageIndex);
   });
 
   const items = createTocElement("div", "sp-toc-items");
-  for (const heading of message.headings) {
+  for (const heading of entry.headings) {
     const item = createTocElement("button", "sp-toc-item");
     item.type = "button";
     item.dataset.level = String(heading.level);
     item.textContent = heading.text;
     item.title = heading.text;
     item.addEventListener("click", () => {
-      heading.element.scrollIntoView({ behavior: "smooth", block: "start" });
+      scrollToHeading(entry.scrollTarget, heading);
     });
+    if (heading.element) headingToButtonMap.set(heading.element, item);
     items.append(item);
   }
 
@@ -406,32 +499,204 @@ function createMessageGroup(message: TocMessage, messageIndex: number): HTMLElem
   return group;
 }
 
-function scrollToMessageStart(message: TocMessage, messageIndex: number): void {
-  message.scrollTarget.scrollIntoView({ behavior: "smooth", block: "start" });
-  content
-    ?.querySelector<HTMLElement>(`.sp-toc-message[data-msg-index="${messageIndex}"]`)
-    ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+function isElementRendered(el: HTMLElement): boolean {
+  if (!el.isConnected) return false;
+  const rect = el.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
+}
+
+function estimateScrollDirection(scroller: Element, target: HTMLElement): number {
+  const rect = scroller.getBoundingClientRect();
+  const probe = document.elementFromPoint(rect.left + rect.width / 2, rect.top + 20);
+  if (probe instanceof HTMLElement) {
+    const pos = target.compareDocumentPosition(probe);
+    if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return -1;
+  }
+  return 1;
+}
+
+function scrollToHeading(scrollTarget: HTMLElement, heading: CachedHeading): void {
+  if (heading.element && isElementRendered(heading.element)) {
+    heading.element.scrollIntoView({ block: "start" });
+    return;
+  }
+  const scroller = findScrollableAncestor(scrollTarget);
+  const dir = estimateScrollDirection(scroller, scrollTarget);
+  if (isElementRendered(scrollTarget)) {
+    scrollTarget.scrollIntoView({ block: "start" });
+  }
+  seekHeading(scroller, scrollTarget, heading, dir, 0, -1);
+}
+
+function scrollToMessageStart(entry: CachedEntry, messageIndex: number): void {
+  if (isElementRendered(entry.scrollTarget)) {
+    entry.scrollTarget.scrollIntoView({ block: "start" });
+    content
+      ?.querySelector<HTMLElement>(`.sp-toc-message[data-msg-index="${messageIndex}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+    return;
+  }
+  const scroller = findScrollableAncestor(entry.scrollTarget);
+  const dir = estimateScrollDirection(scroller, entry.scrollTarget);
+  seekElement(scroller, entry.scrollTarget, dir, () => {
+    content
+      ?.querySelector<HTMLElement>(`.sp-toc-message[data-msg-index="${messageIndex}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  });
+}
+
+function seekElement(scroller: Element, target: HTMLElement, direction: number, onFound: () => void): void {
+  let dir = direction;
+  let attempt = 0;
+  let prevTop = -1;
+  let boundaryHits = 0;
+
+  const step = (): void => {
+    if (isElementRendered(target)) {
+      target.scrollIntoView({ block: "start" });
+      onFound();
+      return;
+    }
+    if (attempt >= 40) return;
+    attempt++;
+
+    const currentTop = scroller.scrollTop;
+    if (currentTop === prevTop) {
+      boundaryHits++;
+      if (boundaryHits >= 2) {
+        if (dir === direction) { dir = -direction; boundaryHits = 0; }
+        else return;
+      }
+    } else {
+      boundaryHits = 0;
+    }
+    prevTop = currentTop;
+    scroller.scrollBy({ top: dir * scroller.clientHeight * 0.7 });
+    window.setTimeout(step, 150);
+  };
+  window.setTimeout(step, 150);
+}
+
+function seekHeading(
+  scroller: Element,
+  scrollTarget: HTMLElement,
+  heading: CachedHeading,
+  direction: number,
+  attempt: number,
+  prevTop: number
+): void {
+  const MAX = 40;
+  const STEP_MS = 150;
+
+  window.setTimeout(() => {
+    const found = findHeadingByText(document.body, heading.text, heading.level);
+    if (found) {
+      heading.element = found;
+      found.scrollIntoView({ block: "start" });
+      return;
+    }
+    if (attempt >= MAX) return;
+
+    const currentTop = scroller.scrollTop;
+    if (currentTop === prevTop && attempt > 0) {
+      if (direction > 0) {
+        if (isElementRendered(scrollTarget)) scrollTarget.scrollIntoView({ block: "start" });
+        seekHeading(scroller, scrollTarget, heading, -1, attempt + 1, -1);
+      }
+      return;
+    }
+    scroller.scrollBy({ top: direction * scroller.clientHeight * 0.7 });
+    seekHeading(scroller, scrollTarget, heading, direction, attempt + 1, currentTop);
+  }, STEP_MS);
+}
+
+function findScrollableAncestor(el: HTMLElement): Element {
+  let node: HTMLElement | null = el.parentElement;
+  while (node) {
+    const { overflowY } = getComputedStyle(node);
+    if ((overflowY === "auto" || overflowY === "scroll") && node.scrollHeight > node.clientHeight) {
+      return node;
+    }
+    node = node.parentElement;
+  }
+  return document.documentElement;
+}
+
+function findHeadingByText(container: HTMLElement, text: string, level: number): HTMLElement | null {
+  for (const el of Array.from(container.querySelectorAll<HTMLElement>(`h${level}`))) {
+    if (el.closest(`[${TOC_ATTRIBUTE}]`)) continue;
+    if (normalizeHeadingText(el.textContent ?? "") === text) return el;
+  }
+  return null;
 }
 
 function findMessageScrollTarget(message: HTMLElement): HTMLElement {
   return message.closest<HTMLElement>(MESSAGE_SCROLL_TARGET_SELECTOR) ?? message;
 }
 
-function observeVisibleMessages(messages: TocMessage[]): void {
+function reconnectHeadingObserver(entries: CachedEntry[]): void {
+  headingObserver?.disconnect();
+  headingObserver = undefined;
+  headingToButtonMap.clear();
+
+  if (!content) return;
+  for (const el of Array.from(content.querySelectorAll(".sp-toc-item-active"))) {
+    el.classList.remove("sp-toc-item-active");
+  }
+  for (const [i, entry] of entries.entries()) {
+    const section = content.querySelector<HTMLElement>(`.sp-toc-message[data-msg-index="${i + 1}"]`);
+    if (!section) continue;
+    const buttons = Array.from(section.querySelectorAll<HTMLButtonElement>(".sp-toc-item"));
+    for (let j = 0; j < entry.headings.length && j < buttons.length; j++) {
+      if (entry.headings[j].element?.isConnected) {
+        headingToButtonMap.set(entry.headings[j].element!, buttons[j]);
+      }
+    }
+  }
+  observeHeadingHighlight(entries);
+}
+
+function observeHeadingHighlight(entries: CachedEntry[]): void {
+  headingObserver = new IntersectionObserver(
+    (observed) => {
+      for (const oe of observed) {
+        if (!oe.isIntersecting) continue;
+        const button = headingToButtonMap.get(oe.target);
+        if (!button) continue;
+        for (const btn of headingToButtonMap.values()) {
+          btn.classList.remove("sp-toc-item-active");
+        }
+        button.classList.add("sp-toc-item-active");
+        button.scrollIntoView({ block: "nearest" });
+        const msgIndex = button.closest<HTMLElement>("[data-msg-index]")?.dataset.msgIndex;
+        if (msgIndex) setActiveNavItem(Number(msgIndex));
+      }
+    },
+    { rootMargin: "0px 0px -60% 0px" }
+  );
+
+  for (const entry of entries) {
+    for (const heading of entry.headings) {
+      if (heading.element?.isConnected) headingObserver.observe(heading.element);
+    }
+  }
+}
+
+function observeVisibleMessages(cachedEntries: CachedEntry[]): void {
   intersectionObserver = new IntersectionObserver(
-    (entries) => {
-      const visible = entries
-        .filter((entry) => entry.isIntersecting)
+    (observed) => {
+      const visible = observed
+        .filter((o) => o.isIntersecting)
         .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
       if (!visible) return;
-      const index = messages.findIndex((message) => message.scrollTarget === visible.target);
+      const index = cachedEntries.findIndex((e) => e.scrollTarget === visible.target);
       if (index >= 0) setActiveNavItem(index + 1);
     },
     { threshold: 0.1 }
   );
 
-  for (const message of messages) {
-    intersectionObserver.observe(message.scrollTarget);
+  for (const entry of cachedEntries) {
+    if (entry.scrollTarget.isConnected) intersectionObserver.observe(entry.scrollTarget);
   }
 }
 
@@ -439,6 +704,11 @@ function setActiveNavItem(messageIndex: number): void {
   if (!nav) return;
   for (const button of Array.from(nav.querySelectorAll<HTMLElement>(".sp-toc-nav-item"))) {
     button.classList.toggle("sp-toc-nav-active", button.dataset.msgIndex === String(messageIndex));
+  }
+  if (!content) return;
+  for (const section of Array.from(content.querySelectorAll<HTMLElement>("[data-msg-index]"))) {
+    const isActive = section.dataset.msgIndex === String(messageIndex);
+    section.querySelector(".sp-toc-msg-label")?.classList.toggle("sp-toc-msg-label-active", isActive);
   }
 }
 
@@ -611,7 +881,12 @@ function handleViewportChange(): void {
 
 function handleRouteChange(): void {
   currentUrl = window.location.href;
+  lastTocFingerprint = "";
+  messageCache.clear();
   intersectionObserver?.disconnect();
+  headingObserver?.disconnect();
+  headingObserver = undefined;
+  headingToButtonMap.clear();
   nav?.replaceChildren();
   content?.replaceChildren();
   scheduleScan(600);
@@ -621,6 +896,9 @@ void (() => {
   window.addEventListener("pagehide", () => {
     mutationObserver?.disconnect();
     intersectionObserver?.disconnect();
+    headingObserver?.disconnect();
+    headingObserver = undefined;
+    headingToButtonMap.clear();
     themeObserver?.disconnect();
     window.removeEventListener("resize", handleViewportChange);
     window.visualViewport?.removeEventListener("resize", handleViewportChange);

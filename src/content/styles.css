@@ -696,6 +696,7 @@
 .sp-toc-collapse,
 .sp-toc-close,
 .sp-toc-theme,
+.sp-toc-refresh,
 .sp-toc-trigger {
   appearance: none;
   display: inline-flex;
@@ -711,7 +712,8 @@
 
 .sp-toc-collapse,
 .sp-toc-close,
-.sp-toc-theme {
+.sp-toc-theme,
+.sp-toc-refresh {
   width: 24px;
   height: 24px;
   border-radius: 999px;
@@ -722,6 +724,7 @@
 .sp-toc-collapse:hover,
 .sp-toc-close:hover,
 .sp-toc-theme:hover,
+.sp-toc-refresh:hover,
 .sp-toc-trigger:hover {
   border-color: rgb(37 99 235 / 32%);
   background: rgb(37 99 235 / 10%);
@@ -969,6 +972,8 @@ html.dark .sp-toc-close,
 .dark .sp-toc-close,
 html.dark .sp-toc-theme,
 .dark .sp-toc-theme,
+html.dark .sp-toc-refresh,
+.dark .sp-toc-refresh,
 html.dark .sp-toc-nav-item,
 .dark .sp-toc-nav-item,
 html.dark .sp-toc-trigger,
@@ -998,6 +1003,8 @@ html.dark .sp-toc-close:hover,
 .dark .sp-toc-close:hover,
 html.dark .sp-toc-theme:hover,
 .dark .sp-toc-theme:hover,
+html.dark .sp-toc-refresh:hover,
+.dark .sp-toc-refresh:hover,
 html.dark .sp-toc-trigger:hover,
 .dark .sp-toc-trigger:hover {
   background: rgb(59 130 246 / 16%);
@@ -1028,6 +1035,7 @@ html.dark .sp-toc-trigger:hover,
   .sp-toc-collapse,
   .sp-toc-close,
   .sp-toc-theme,
+  .sp-toc-refresh,
   .sp-toc-nav-item,
   .sp-toc-trigger {
     border-color: rgb(255 255 255 / 10%);
@@ -1049,6 +1057,7 @@ html.dark .sp-toc-trigger:hover,
   .sp-toc-collapse:hover,
   .sp-toc-close:hover,
   .sp-toc-theme:hover,
+  .sp-toc-refresh:hover,
   .sp-toc-trigger:hover {
     background: rgb(59 130 246 / 16%);
     color: #bfdbfe;
@@ -1082,6 +1091,7 @@ html.dark .sp-toc-trigger:hover,
 .sp-toc-panel[data-sp-toc-theme="light"] .sp-toc-collapse,
 .sp-toc-panel[data-sp-toc-theme="light"] .sp-toc-close,
 .sp-toc-panel[data-sp-toc-theme="light"] .sp-toc-theme,
+.sp-toc-panel[data-sp-toc-theme="light"] .sp-toc-refresh,
 .sp-toc-panel[data-sp-toc-theme="light"] .sp-toc-nav-item,
 .sp-toc-trigger[data-sp-toc-theme="light"] {
   border-color: rgb(15 23 42 / 10%);
@@ -1103,6 +1113,7 @@ html.dark .sp-toc-trigger:hover,
 .sp-toc-panel[data-sp-toc-theme="light"] .sp-toc-collapse:hover,
 .sp-toc-panel[data-sp-toc-theme="light"] .sp-toc-close:hover,
 .sp-toc-panel[data-sp-toc-theme="light"] .sp-toc-theme:hover,
+.sp-toc-panel[data-sp-toc-theme="light"] .sp-toc-refresh:hover,
 .sp-toc-trigger[data-sp-toc-theme="light"]:hover {
   border-color: rgb(37 99 235 / 32%);
   background: rgb(37 99 235 / 10%);
@@ -1132,6 +1143,7 @@ html.dark .sp-toc-trigger:hover,
 .sp-toc-panel[data-sp-toc-theme="dark"] .sp-toc-collapse,
 .sp-toc-panel[data-sp-toc-theme="dark"] .sp-toc-close,
 .sp-toc-panel[data-sp-toc-theme="dark"] .sp-toc-theme,
+.sp-toc-panel[data-sp-toc-theme="dark"] .sp-toc-refresh,
 .sp-toc-panel[data-sp-toc-theme="dark"] .sp-toc-nav-item,
 .sp-toc-trigger[data-sp-toc-theme="dark"] {
   border-color: rgb(255 255 255 / 10%);
@@ -1153,7 +1165,73 @@ html.dark .sp-toc-trigger:hover,
 .sp-toc-panel[data-sp-toc-theme="dark"] .sp-toc-collapse:hover,
 .sp-toc-panel[data-sp-toc-theme="dark"] .sp-toc-close:hover,
 .sp-toc-panel[data-sp-toc-theme="dark"] .sp-toc-theme:hover,
+.sp-toc-panel[data-sp-toc-theme="dark"] .sp-toc-refresh:hover,
 .sp-toc-trigger[data-sp-toc-theme="dark"]:hover {
+  background: rgb(59 130 246 / 16%);
+  color: #bfdbfe;
+}
+
+.sp-toc-refresh {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.sp-toc-refresh--spinning {
+  animation: sp-spin 400ms linear;
+}
+
+.sp-toc-msg-label-active {
+  color: #1d4ed8;
+  font-weight: 620;
+}
+
+.sp-toc-item-active {
+  border-left: 2px solid #2563eb;
+  background: rgb(37 99 235 / 8%);
+  color: #1d4ed8;
+  font-weight: 500;
+}
+
+html.dark .sp-toc-msg-label-active,
+.dark .sp-toc-msg-label-active {
+  color: #bfdbfe;
+}
+
+html.dark .sp-toc-item-active,
+.dark .sp-toc-item-active {
+  border-left-color: #3b82f6;
+  background: rgb(59 130 246 / 16%);
+  color: #bfdbfe;
+}
+
+@media (prefers-color-scheme: dark) {
+  .sp-toc-msg-label-active {
+    color: #bfdbfe;
+  }
+
+  .sp-toc-item-active {
+    border-left-color: #3b82f6;
+    background: rgb(59 130 246 / 16%);
+    color: #bfdbfe;
+  }
+}
+
+.sp-toc-panel[data-sp-toc-theme="light"] .sp-toc-msg-label-active {
+  color: #1d4ed8;
+}
+
+.sp-toc-panel[data-sp-toc-theme="light"] .sp-toc-item-active {
+  border-left-color: #2563eb;
+  background: rgb(37 99 235 / 8%);
+  color: #1d4ed8;
+}
+
+.sp-toc-panel[data-sp-toc-theme="dark"] .sp-toc-msg-label-active {
+  color: #bfdbfe;
+}
+
+.sp-toc-panel[data-sp-toc-theme="dark"] .sp-toc-item-active {
+  border-left-color: #3b82f6;
   background: rgb(59 130 246 / 16%);
   color: #bfdbfe;
 }

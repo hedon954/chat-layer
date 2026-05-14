@@ -7,6 +7,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The release workflow extracts the section matching the pushed tag and uses it
 as the GitHub Release body, so each version section should be self-contained.
 
+## [v0.4.0] — 2026-05-14
+
+Major improvements to the floating table-of-contents panel: manual refresh,
+scroll-based heading highlight, cache-based architecture for long virtualized
+conversations, and several heading-detection fixes for ChatGPT.
+
+### Added
+
+- **Manual refresh button**: ↻ button in the TOC header re-scans the page and
+  rebuilds the TOC on demand with a 400 ms spin animation for feedback.
+- **Scroll-based heading highlight**: as the user scrolls, the TOC entry
+  corresponding to the heading in the reading zone (top 40 % of viewport) is
+  highlighted with a left-border accent. The active Reply label and nav pill
+  stay in sync. Supports light/dark modes and explicit theme overrides.
+- **Cache-based TOC architecture**: once a heading is discovered it stays in
+  the TOC even when ChatGPT/Gemini virtualizes the source element.
+  `mergeFreshIntoCache` updates element refs on each scan; `buildOrderedEntries`
+  sorts by DOM position; a fingerprint check (level + text) prevents unnecessary
+  UI rebuilds. The heading observer is reconnected with fresh element refs even
+  when the fingerprint is unchanged.
+- **Click-to-scroll fallback for virtualized headings**: if the target heading
+  is not rendered, `scrollToHeading` jumps to the message container, detects
+  the actual scrollable ancestor, estimates scroll direction via
+  `elementFromPoint` + `compareDocumentPosition`, and progressively scrolls
+  (up to 30 × 0.7 viewport-heights) until the heading appears or the boundary
+  is reached. Both up and down directions are tried.
+- All AI replies now appear in the TOC as "Reply N" even when they contain no
+  headings.
+
+### Changed
+
+- **Heading extraction scope (ChatGPT)**: broadened search from the narrow
+  `[data-message-author-role]` element to the full turn container (`article` /
+  `[data-testid^="conversation-turn-"]`), catching headings placed outside the
+  role div.
+
+### Fixed
+
+- **ChatGPT attribution filter**: headings like "ChatGPT 说：" / "ChatGPT says:"
+  are filtered from the TOC. Real headings containing "ChatGPT" still appear.
+- **Fingerprint guard**: `refreshToc` computes a text fingerprint and skips the
+  rebuild when headings are unchanged, preventing flicker during scroll-triggered
+  DOM mutations.
+- **Stale heading refs**: `reconnectHeadingObserver` clears orphaned active
+  classes and re-maps fresh element refs after the platform re-renders
+  virtualized content.
+- **Scroll direction**: `estimateScrollDirection` probes the visible area to
+  pick the correct initial direction, eliminating the "scroll down then back up"
+  behavior when navigating to earlier messages.
+- **Visibility check**: `isElementRendered` checks both `isConnected` and
+  non-zero bounding rect, preventing silent no-op `scrollIntoView` calls on
+  zero-size virtualized elements.
+
+### Install
+
+1. Download `chatlayer-v0.4.0.zip` from the assets below and extract it.
+2. Open `chrome://extensions/` and enable **Developer mode**.
+3. Click **Load unpacked** and select the extracted folder.
+
+### Known limitations
+
+- Heading highlight relies on `IntersectionObserver`; headings whose DOM
+  elements are currently virtualized cannot be highlighted until the platform
+  re-renders them (a manual scroll or refresh triggers this).
+- The progressive scroll-search has a finite budget (30 steps ≈ 4.5 s); in
+  extremely long conversations the target heading may not be reached.
+
 ## [v0.3.3] — 2026-05-13
 
 This patch release makes the floating table-of-contents panel more resilient
