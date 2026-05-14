@@ -644,6 +644,9 @@ function reconnectHeadingObserver(entries: CachedEntry[]): void {
   headingToButtonMap.clear();
 
   if (!content) return;
+  for (const el of Array.from(content.querySelectorAll(".sp-toc-item-active"))) {
+    el.classList.remove("sp-toc-item-active");
+  }
   for (const [i, entry] of entries.entries()) {
     const section = content.querySelector<HTMLElement>(`.sp-toc-message[data-msg-index="${i + 1}"]`);
     if (!section) continue;
