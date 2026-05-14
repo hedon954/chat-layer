@@ -1180,11 +1180,21 @@ html.dark .sp-toc-trigger:hover,
   animation: sp-spin 400ms linear;
 }
 
+.sp-toc-msg-label-active {
+  color: #1d4ed8;
+  font-weight: 620;
+}
+
 .sp-toc-item-active {
   border-left: 2px solid #2563eb;
   background: rgb(37 99 235 / 8%);
   color: #1d4ed8;
   font-weight: 500;
+}
+
+html.dark .sp-toc-msg-label-active,
+.dark .sp-toc-msg-label-active {
+  color: #bfdbfe;
 }
 
 html.dark .sp-toc-item-active,
@@ -1195,6 +1205,10 @@ html.dark .sp-toc-item-active,
 }
 
 @media (prefers-color-scheme: dark) {
+  .sp-toc-msg-label-active {
+    color: #bfdbfe;
+  }
+
   .sp-toc-item-active {
     border-left-color: #3b82f6;
     background: rgb(59 130 246 / 16%);
@@ -1202,10 +1216,18 @@ html.dark .sp-toc-item-active,
   }
 }
 
+.sp-toc-panel[data-sp-toc-theme="light"] .sp-toc-msg-label-active {
+  color: #1d4ed8;
+}
+
 .sp-toc-panel[data-sp-toc-theme="light"] .sp-toc-item-active {
   border-left-color: #2563eb;
   background: rgb(37 99 235 / 8%);
   color: #1d4ed8;
+}
+
+.sp-toc-panel[data-sp-toc-theme="dark"] .sp-toc-msg-label-active {
+  color: #bfdbfe;
 }
 
 .sp-toc-panel[data-sp-toc-theme="dark"] .sp-toc-item-active {

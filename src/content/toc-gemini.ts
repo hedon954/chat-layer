@@ -267,7 +267,6 @@ function mergeFreshIntoCache(freshMessages: TocMessage[]): void {
 
 function buildOrderedEntries(): CachedEntry[] {
   return Array.from(messageCache.values())
-    .filter((e) => e.headings.length > 0)
     .sort((a, b) => {
       const pos = a.scrollTarget.compareDocumentPosition(b.scrollTarget);
       if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return -1;
@@ -507,16 +506,27 @@ function isElementRendered(el: HTMLElement): boolean {
   return rect.width > 0 && rect.height > 0;
 }
 
+function estimateScrollDirection(scroller: Element, target: HTMLElement): number {
+  const rect = scroller.getBoundingClientRect();
+  const probe = document.elementFromPoint(rect.left + rect.width / 2, rect.top + 20);
+  if (probe instanceof HTMLElement) {
+    const pos = target.compareDocumentPosition(probe);
+    if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return -1;
+  }
+  return 1;
+}
+
 function scrollToHeading(scrollTarget: HTMLElement, heading: CachedHeading): void {
   if (heading.element && isElementRendered(heading.element)) {
     heading.element.scrollIntoView({ block: "start" });
     return;
   }
   const scroller = findScrollableAncestor(scrollTarget);
+  const dir = estimateScrollDirection(scroller, scrollTarget);
   if (isElementRendered(scrollTarget)) {
     scrollTarget.scrollIntoView({ block: "start" });
   }
-  seekHeading(scroller, scrollTarget, heading, 1, 0, -1);
+  seekHeading(scroller, scrollTarget, heading, dir, 0, -1);
 }
 
 function scrollToMessageStart(entry: CachedEntry, messageIndex: number): void {
@@ -528,15 +538,16 @@ function scrollToMessageStart(entry: CachedEntry, messageIndex: number): void {
     return;
   }
   const scroller = findScrollableAncestor(entry.scrollTarget);
-  seekElement(scroller, entry.scrollTarget, () => {
+  const dir = estimateScrollDirection(scroller, entry.scrollTarget);
+  seekElement(scroller, entry.scrollTarget, dir, () => {
     content
       ?.querySelector<HTMLElement>(`.sp-toc-message[data-msg-index="${messageIndex}"]`)
       ?.scrollIntoView({ block: "nearest" });
   });
 }
 
-function seekElement(scroller: Element, target: HTMLElement, onFound: () => void): void {
-  let direction = 1;
+function seekElement(scroller: Element, target: HTMLElement, direction: number, onFound: () => void): void {
+  let dir = direction;
   let attempt = 0;
   let prevTop = -1;
   let boundaryHits = 0;
@@ -554,14 +565,14 @@ function seekElement(scroller: Element, target: HTMLElement, onFound: () => void
     if (currentTop === prevTop) {
       boundaryHits++;
       if (boundaryHits >= 2) {
-        if (direction === 1) { direction = -1; boundaryHits = 0; }
+        if (dir === direction) { dir = -direction; boundaryHits = 0; }
         else return;
       }
     } else {
       boundaryHits = 0;
     }
     prevTop = currentTop;
-    scroller.scrollBy({ top: direction * scroller.clientHeight * 0.7 });
+    scroller.scrollBy({ top: dir * scroller.clientHeight * 0.7 });
     window.setTimeout(step, 150);
   };
   window.setTimeout(step, 150);
@@ -589,7 +600,7 @@ function seekHeading(
 
     const currentTop = scroller.scrollTop;
     if (currentTop === prevTop && attempt > 0) {
-      if (direction === 1) {
+      if (direction > 0) {
         if (isElementRendered(scrollTarget)) scrollTarget.scrollIntoView({ block: "start" });
         seekHeading(scroller, scrollTarget, heading, -1, attempt + 1, -1);
       }
@@ -636,6 +647,8 @@ function observeHeadingHighlight(entries: CachedEntry[]): void {
         }
         button.classList.add("sp-toc-item-active");
         button.scrollIntoView({ block: "nearest" });
+        const msgIndex = button.closest<HTMLElement>("[data-msg-index]")?.dataset.msgIndex;
+        if (msgIndex) setActiveNavItem(Number(msgIndex));
       }
     },
     { rootMargin: "0px 0px -60% 0px" }
@@ -670,6 +683,11 @@ function setActiveNavItem(messageIndex: number): void {
   if (!nav) return;
   for (const button of Array.from(nav.querySelectorAll<HTMLElement>(".sp-toc-nav-item"))) {
     button.classList.toggle("sp-toc-nav-active", button.dataset.msgIndex === String(messageIndex));
+  }
+  if (!content) return;
+  for (const section of Array.from(content.querySelectorAll<HTMLElement>("[data-msg-index]"))) {
+    const isActive = section.dataset.msgIndex === String(messageIndex);
+    section.querySelector(".sp-toc-msg-label")?.classList.toggle("sp-toc-msg-label-active", isActive);
   }
 }
 
