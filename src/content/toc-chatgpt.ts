@@ -502,24 +502,49 @@ function scrollToHeading(scrollTarget: HTMLElement, heading: CachedHeading): voi
     heading.element.scrollIntoView({ behavior: "smooth", block: "start" });
     return;
   }
-  scrollTarget.scrollIntoView({ behavior: "smooth", block: "start" });
-  retryFindAndScroll(scrollTarget, heading, 0);
+  const scroller = findScrollableAncestor(scrollTarget);
+  scrollTarget.scrollIntoView({ block: "start" });
+  progressiveScrollSearch(scroller, scrollTarget, heading, 0, -1);
 }
 
-function retryFindAndScroll(scrollTarget: HTMLElement, heading: CachedHeading, attempt: number): void {
-  const MAX_ATTEMPTS = 6;
-  const RETRY_MS = 300;
+function findScrollableAncestor(el: HTMLElement): Element {
+  let node: HTMLElement | null = el.parentElement;
+  while (node) {
+    const { overflowY } = getComputedStyle(node);
+    if ((overflowY === "auto" || overflowY === "scroll") && node.scrollHeight > node.clientHeight) {
+      return node;
+    }
+    node = node.parentElement;
+  }
+  return document.documentElement;
+}
+
+function progressiveScrollSearch(
+  scroller: Element,
+  scrollTarget: HTMLElement,
+  heading: CachedHeading,
+  attempt: number,
+  prevScrollTop: number
+): void {
+  const MAX_ATTEMPTS = 30;
+  const STEP_MS = 150;
 
   window.setTimeout(() => {
-    const found = findHeadingByText(scrollTarget, heading.text, heading.level)
-      ?? findHeadingByText(document.body, heading.text, heading.level);
+    const found = findHeadingByText(document.body, heading.text, heading.level);
     if (found) {
       heading.element = found;
       found.scrollIntoView({ behavior: "smooth", block: "start" });
-    } else if (attempt < MAX_ATTEMPTS) {
-      retryFindAndScroll(scrollTarget, heading, attempt + 1);
+      return;
     }
-  }, RETRY_MS);
+
+    if (attempt >= MAX_ATTEMPTS) return;
+
+    const currentTop = scroller.scrollTop;
+    if (currentTop === prevScrollTop && attempt > 0) return;
+
+    scroller.scrollBy({ top: scroller.clientHeight * 0.7 });
+    progressiveScrollSearch(scroller, scrollTarget, heading, attempt + 1, currentTop);
+  }, STEP_MS);
 }
 
 function findHeadingByText(container: HTMLElement, text: string, level: number): HTMLElement | null {
