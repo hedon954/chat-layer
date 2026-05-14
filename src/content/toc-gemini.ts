@@ -45,9 +45,12 @@ let nav: HTMLElement | undefined;
 let content: HTMLElement | undefined;
 let mutationObserver: MutationObserver | undefined;
 let intersectionObserver: IntersectionObserver | undefined;
+let headingObserver: IntersectionObserver | undefined;
+const headingToButtonMap = new Map<Element, HTMLButtonElement>();
 let themeObserver: MutationObserver | undefined;
 let scanTimer: number | undefined;
 let urlTimer: number | undefined;
+let progressiveTimers: number[] = [];
 let currentUrl = window.location.href;
 let closedByUser = false;
 let initialized = false;
@@ -68,6 +71,7 @@ export async function initGeminiToc(): Promise<void> {
   await restoreThemeMode();
   observeThemeChanges();
   scheduleScan(INITIAL_SCAN_DELAY_MS);
+  scheduleProgressiveRescan();
 
   mutationObserver = new MutationObserver((records) => {
     if (records.every((record) => isTocMutation(record))) return;
@@ -102,6 +106,17 @@ function createTocShell(): void {
   title.textContent = "Contents";
 
   const actions = createTocElement("div", "sp-toc-actions");
+
+  const refreshButton = createTocElement("button", "sp-toc-refresh");
+  refreshButton.type = "button";
+  refreshButton.textContent = "↻";
+  refreshButton.title = "Refresh contents";
+  refreshButton.addEventListener("click", () => {
+    refreshButton.classList.add("sp-toc-refresh--spinning");
+    refreshToc();
+    window.setTimeout(() => refreshButton.classList.remove("sp-toc-refresh--spinning"), 400);
+  });
+
   themeButton = createTocElement("button", "sp-toc-theme");
   themeButton.type = "button";
   themeButton.addEventListener("click", () => {
@@ -119,7 +134,7 @@ function createTocShell(): void {
   closeButton.textContent = "×";
   closeButton.title = "Hide contents";
   closeButton.addEventListener("click", closePanel);
-  actions.append(themeButton, collapseButton, closeButton);
+  actions.append(refreshButton, themeButton, collapseButton, closeButton);
   header.append(title, actions);
   header.addEventListener("pointerdown", (event) => startDrag(event, header));
 
@@ -207,6 +222,9 @@ function refreshToc(): void {
   const messages = collectMessages();
   intersectionObserver?.disconnect();
   intersectionObserver = undefined;
+  headingObserver?.disconnect();
+  headingObserver = undefined;
+  headingToButtonMap.clear();
   nav.replaceChildren();
   content.replaceChildren();
 
@@ -223,6 +241,7 @@ function refreshToc(): void {
   }
 
   observeVisibleMessages(messages);
+  observeHeadingHighlight(messages);
 
   if (!closedByUser) {
     panel.hidden = false;
@@ -408,6 +427,7 @@ function createMessageGroup(message: TocMessage, messageIndex: number): HTMLElem
     item.addEventListener("click", () => {
       heading.element.scrollIntoView({ behavior: "smooth", block: "start" });
     });
+    headingToButtonMap.set(heading.element, item);
     items.append(item);
   }
 
@@ -424,6 +444,30 @@ function scrollToMessageStart(message: TocMessage, messageIndex: number): void {
 
 function findResponseScrollTarget(message: HTMLElement): HTMLElement {
   return message.closest<HTMLElement>(RESPONSE_SCROLL_TARGET_SELECTOR) ?? message;
+}
+
+function observeHeadingHighlight(messages: TocMessage[]): void {
+  headingObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const button = headingToButtonMap.get(entry.target);
+        if (!button) continue;
+        for (const btn of headingToButtonMap.values()) {
+          btn.classList.remove("sp-toc-item-active");
+        }
+        button.classList.add("sp-toc-item-active");
+        button.scrollIntoView({ block: "nearest" });
+      }
+    },
+    { rootMargin: "0px 0px -60% 0px" }
+  );
+
+  for (const message of messages) {
+    for (const heading of message.headings) {
+      headingObserver.observe(heading.element);
+    }
+  }
 }
 
 function observeVisibleMessages(messages: TocMessage[]): void {
@@ -618,23 +662,50 @@ function handleViewportChange(): void {
   }, 50);
 }
 
+function countTocItems(): number {
+  return content?.querySelectorAll(".sp-toc-item").length ?? 0;
+}
+
+function scheduleProgressiveRescan(): void {
+  for (const timer of progressiveTimers) window.clearTimeout(timer);
+  progressiveTimers = [];
+
+  for (const delay of [2_000, 5_000]) {
+    const before = countTocItems();
+    const timer = window.setTimeout(() => {
+      const after = countTocItems();
+      if (after !== before) refreshToc();
+    }, delay);
+    progressiveTimers.push(timer);
+  }
+}
+
 function handleRouteChange(): void {
   currentUrl = window.location.href;
   intersectionObserver?.disconnect();
+  headingObserver?.disconnect();
+  headingObserver = undefined;
+  headingToButtonMap.clear();
   nav?.replaceChildren();
   content?.replaceChildren();
   scheduleScan(600);
+  scheduleProgressiveRescan();
 }
 
 void (() => {
   window.addEventListener("pagehide", () => {
     mutationObserver?.disconnect();
     intersectionObserver?.disconnect();
+    headingObserver?.disconnect();
+    headingObserver = undefined;
+    headingToButtonMap.clear();
     themeObserver?.disconnect();
     window.removeEventListener("resize", handleViewportChange);
     window.visualViewport?.removeEventListener("resize", handleViewportChange);
     window.visualViewport?.removeEventListener("scroll", handleViewportChange);
     if (resizeTimer !== undefined) window.clearTimeout(resizeTimer);
     if (urlTimer !== undefined) window.clearInterval(urlTimer);
+    for (const timer of progressiveTimers) window.clearTimeout(timer);
+    progressiveTimers = [];
   });
 })();
