@@ -837,7 +837,7 @@
   display: block;
   width: 100%;
   min-height: 26px;
-  overflow: hidden;
+  overflow: visible;
   border: 0;
   background: transparent;
   color: inherit;
@@ -846,9 +846,9 @@
   font-size: 12px;
   font-weight: 400;
   line-height: 1.25;
+  overflow-wrap: anywhere;
   text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .sp-toc-item:hover {
@@ -889,18 +889,18 @@
 .sp-toc-resize {
   position: absolute;
   bottom: 0;
-  width: 22px;
-  height: 22px;
-  opacity: 0;
+  width: 28px;
+  height: 28px;
+  opacity: 0.35;
   touch-action: none;
 }
 
 .sp-toc-resize::after {
   position: absolute;
-  right: 5px;
-  bottom: 5px;
-  width: 8px;
-  height: 8px;
+  right: 6px;
+  bottom: 6px;
+  width: 10px;
+  height: 10px;
   border-right: 2px solid rgb(100 116 139 / 45%);
   border-bottom: 2px solid rgb(100 116 139 / 45%);
   content: "";
