@@ -14,9 +14,9 @@ export type TocViewport = {
 };
 
 const DEFAULT_MARGIN = 8;
-const DEFAULT_PANEL_WIDTH = 360;
+const DEFAULT_PANEL_WIDTH = 228;
 const DEFAULT_PANEL_HEIGHT = 120;
-const MIN_PANEL_WIDTH = 240;
+const MIN_PANEL_WIDTH = 180;
 const MIN_PANEL_HEIGHT = 120;
 
 export function constrainTocPosition(
