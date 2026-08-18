@@ -14,7 +14,7 @@ diagram rendering, and lightweight navigation without replacing the original UI.
 ## Features
 
 - Floating table of contents for every AI reply, including replies without headings.
-- Clickable `Reply n` navigation that jumps to the start of each AI response.
+- Clickable `Reply n` labels that include the start of the matching user message (up to two lines) and jump to that AI response.
 - Inline Mermaid rendering through a sandboxed extension page.
 - PlantUML rendering through a configurable PlantUML server.
 - Diagram viewer with zoom, pan, reset, copy source, and open-on-server controls.

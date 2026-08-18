@@ -11,6 +11,7 @@ type TocMessage = {
   message: HTMLElement;
   scrollTarget: HTMLElement;
   headings: TocHeading[];
+  userPreview: string;
 };
 
 type CachedHeading = {
@@ -22,6 +23,7 @@ type CachedHeading = {
 type CachedEntry = {
   scrollTarget: HTMLElement;
   headings: CachedHeading[];
+  userPreview: string;
 };
 
 type TocThemeMode = "auto" | "light" | "dark";
@@ -48,6 +50,13 @@ const RESPONSE_SCROLL_TARGET_SELECTOR = [
   "[class*='model-response']",
   "[class*='response']"
 ].join(",");
+const USER_QUERY_SELECTORS = [
+  "user-query",
+  "[class*='user-query']",
+  "[data-test-id='user-query']",
+  ".query-text"
+];
+const USER_PREVIEW_MAX_CHARS = 160;
 
 let panel: HTMLElement | undefined;
 let trigger: HTMLButtonElement | undefined;
@@ -229,7 +238,7 @@ function scheduleScan(delay: number): void {
 
 function buildTocFingerprint(entries: CachedEntry[]): string {
   return entries
-    .map((e) => e.headings.map((h) => `${h.level}:${h.text}`).join("\n"))
+    .map((e) => `${e.userPreview}\n${e.headings.map((h) => `${h.level}:${h.text}`).join("\n")}`)
     .join("\n\n");
 }
 
@@ -237,6 +246,7 @@ function mergeFreshIntoCache(freshMessages: TocMessage[]): void {
   for (const msg of freshMessages) {
     const existing = messageCache.get(msg.scrollTarget);
     if (existing) {
+      if (msg.userPreview) existing.userPreview = msg.userPreview;
       const freshMap = new Map(msg.headings.map((h) => [`${h.level}\0${h.text}`, h.element]));
       for (const cached of existing.headings) {
         const key = `${cached.level}\0${cached.text}`;
@@ -255,7 +265,8 @@ function mergeFreshIntoCache(freshMessages: TocMessage[]): void {
     } else {
       messageCache.set(msg.scrollTarget, {
         scrollTarget: msg.scrollTarget,
-        headings: msg.headings.map((h) => ({ level: h.level, text: h.text, element: h.element }))
+        headings: msg.headings.map((h) => ({ level: h.level, text: h.text, element: h.element })),
+        userPreview: msg.userPreview
       });
     }
   }
@@ -326,7 +337,12 @@ function collectMessages(): TocMessage[] {
 
   for (const element of candidates) {
     const headings = collectHeadings(element);
-    messages.push({ message: element, scrollTarget: findResponseScrollTarget(element), headings });
+    messages.push({
+      message: element,
+      scrollTarget: findResponseScrollTarget(element),
+      headings,
+      userPreview: findPrecedingUserPreview(element)
+    });
   }
 
   return messages;
@@ -459,12 +475,54 @@ function readRgbLuminance(value: string): number | null {
   return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
 }
 
+function collectUserQueryCandidates(): HTMLElement[] {
+  const candidates = new Set<HTMLElement>();
+  for (const selector of USER_QUERY_SELECTORS) {
+    for (const element of Array.from(document.querySelectorAll<HTMLElement>(selector))) {
+      if (element.closest(`[${TOC_ATTRIBUTE}]`)) continue;
+      if (element.closest("model-response, [class*='model-response']")) continue;
+      candidates.add(element);
+    }
+  }
+
+  return Array.from(candidates).filter(
+    (candidate) => !Array.from(candidates).some((other) => other !== candidate && other.contains(candidate))
+  );
+}
+
+function findPrecedingUserPreview(response: HTMLElement): string {
+  let best: HTMLElement | undefined;
+  for (const userQuery of collectUserQueryCandidates()) {
+    const position = userQuery.compareDocumentPosition(response);
+    if (!(position & Node.DOCUMENT_POSITION_FOLLOWING)) continue;
+    if (!best || (best.compareDocumentPosition(userQuery) & Node.DOCUMENT_POSITION_FOLLOWING)) {
+      best = userQuery;
+    }
+  }
+  return best ? extractUserPreview(best) : "";
+}
+
+function extractUserPreview(element: HTMLElement): string {
+  const preferred = Array.from(
+    element.querySelectorAll<HTMLElement>(
+      ".query-text, .query-text-line, .query-content, [class*='query-text']"
+    )
+  ).find((node) => normalizeHeadingText(node.innerText || node.textContent || ""));
+  const source = preferred ?? element;
+  const raw = normalizeHeadingText(source.innerText || source.textContent || "");
+  const text = raw.replace(/^(?:You said|You say|你说|您说)\s*[:：]?\s*/iu, "").trim();
+  if (!text) return "";
+  return text.length <= USER_PREVIEW_MAX_CHARS ? text : text.slice(0, USER_PREVIEW_MAX_CHARS).trim();
+}
+
 function createNavItem(entry: CachedEntry, messageIndex: number): HTMLButtonElement {
   const button = createTocElement("button", "sp-toc-nav-item");
   button.type = "button";
   button.textContent = String(messageIndex);
   button.dataset.msgIndex = String(messageIndex);
-  button.title = `Reply ${messageIndex}`;
+  button.title = entry.userPreview
+    ? `Reply ${messageIndex}: ${entry.userPreview}`
+    : `Reply ${messageIndex}`;
   button.addEventListener("click", () => {
     scrollToMessageStart(entry, messageIndex);
     setActiveNavItem(messageIndex);
@@ -478,8 +536,19 @@ function createMessageGroup(entry: CachedEntry, messageIndex: number): HTMLEleme
 
   const label = createTocElement("button", "sp-toc-msg-label");
   label.type = "button";
-  label.textContent = `Reply ${messageIndex}`;
-  label.title = `Go to reply ${messageIndex}`;
+  const labelText = createTocElement("span", "sp-toc-msg-label-text");
+  const indexLabel = createTocElement("span", "sp-toc-msg-index");
+  indexLabel.textContent = `Reply ${messageIndex}`;
+  labelText.append(indexLabel);
+  if (entry.userPreview) {
+    const preview = createTocElement("span", "sp-toc-msg-preview");
+    preview.textContent = ` · ${entry.userPreview}`;
+    labelText.append(preview);
+    label.title = `Go to reply ${messageIndex}: ${entry.userPreview}`;
+  } else {
+    label.title = `Go to reply ${messageIndex}`;
+  }
+  label.append(labelText);
   label.addEventListener("click", () => {
     scrollToMessageStart(entry, messageIndex);
     setActiveNavItem(messageIndex);

@@ -244,3 +244,23 @@ limit the container height so diagrams can use their natural height.
   import one TOC module from the other.
 - `initChatGptToc()` and `initGeminiToc()` must both be async functions.
 - Ensure `npx tsc --noEmit` and `npx eslint .` pass.
+
+---
+
+## Later additions
+
+### Reply user-message preview (v0.5.0)
+
+Each `.sp-toc-msg-label` now shows `Reply N` plus the start of the preceding
+user message:
+
+```text
+.sp-toc-msg-label
+├── .sp-toc-msg-index ("Reply N")
+└── .sp-toc-msg-preview (" · user message…")  [when available]
+```
+
+- Preview text is clamped to two lines via `.sp-toc-msg-label-text`.
+- ChatGPT reads the nearest preceding `[data-message-author-role="user"]`.
+- Gemini reads the nearest preceding `user-query` / `.query-text` candidate.
+- Cached `userPreview` is kept when the user turn is later virtualized away.

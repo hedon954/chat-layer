@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The release workflow extracts the section matching the pushed tag and uses it
 as the GitHub Release body, so each version section should be self-contained.
 
+## [v0.5.0] — 2026-08-18
+
+Reply labels in the floating table of contents now include a short preview of
+the matching user message, so long conversations are easier to scan and jump
+between.
+
+### Highlights
+- Each `Reply N` label appends the start of the preceding user prompt.
+- Preview text wraps to at most two lines, with a tooltip for a longer snippet.
+- ChatGPT and Gemini both cache the preview after first discovery so virtualized
+  user messages do not blank the label later.
+
+### Added
+- User-message previews on ChatGPT and Gemini TOC reply labels, including hover
+  titles on both the label and the numbered nav pill.
+
+### Tooling
+- Synchronized `package.json`, `package-lock.json`, and the extension manifest
+  on version `0.5.0`.
+
+### Install
+1. Download `chatlayer-v0.5.0.zip` from the assets below and extract it.
+2. Open `chrome://extensions/` and enable **Developer mode**.
+3. Click **Load unpacked** and select the extracted folder.
+
+### Known limitations
+- A preview appears only after the matching user message has been seen in the
+  DOM. Turns that were never rendered may keep a plain `Reply N` label until a
+  later scan.
+- Heading highlight still depends on rendered DOM elements. ChatGPT or Gemini
+  virtualized content must re-enter the DOM before its exact heading can become
+  active in the TOC.
+
 ## [v0.4.1] — 2026-05-14
 
 This patch release restores reply-level navigation alignment while preserving
