@@ -1,4 +1,5 @@
 import { loadSettings } from "../shared/settings";
+import { trackPointerGesture } from "./toc-pointer";
 import {
   constrainTocPosition,
   constrainTocSize,
@@ -70,6 +71,8 @@ let themeMode: TocThemeMode = "auto";
 let lastTocFingerprint = "";
 let resizeTimer: number | undefined;
 let userAdjustedLayout = false;
+let pointerGestureActive = false;
+let stopActivePointerGesture: (() => void) | undefined;
 
 export async function initChatGptToc(): Promise<void> {
   if (initialized) return;
@@ -776,37 +779,46 @@ function setActiveNavItem(messageIndex: number): void {
   }
 }
 
+function isHeaderActionTarget(target: EventTarget | null): boolean {
+  return target instanceof Element && Boolean(target.closest("button"));
+}
+
 function startDrag(event: PointerEvent, handle: HTMLElement): void {
-  if (!panel || event.button !== 0 || event.target instanceof HTMLButtonElement) return;
+  if (!panel || event.button !== 0 || isHeaderActionTarget(event.target)) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  stopActivePointerGesture?.();
 
   const rect = panel.getBoundingClientRect();
   const offsetX = event.clientX - rect.left;
   const offsetY = event.clientY - rect.top;
   let moved = false;
 
-  handle.setPointerCapture(event.pointerId);
+  pointerGestureActive = true;
   panel.classList.add("sp-toc-panel--dragging");
 
-  const move = (moveEvent: PointerEvent): void => {
-    if (!panel) return;
-    moved = true;
-    userAdjustedLayout = true;
-    setPanelPosition(constrainPosition(moveEvent.clientX - offsetX, moveEvent.clientY - offsetY));
-  };
-
-  const up = (): void => {
-    if (!panel) return;
-    panel.classList.remove("sp-toc-panel--dragging");
-    if (moved) {
+  const { stop } = trackPointerGesture({
+    handle,
+    pointerId: event.pointerId,
+    onMove: (moveEvent) => {
+      if (!panel) return;
+      moved = true;
+      userAdjustedLayout = true;
+      setPanelPosition(constrainPosition(moveEvent.clientX - offsetX, moveEvent.clientY - offsetY));
+    },
+    onEnd: () => {
+      pointerGestureActive = false;
+      stopActivePointerGesture = undefined;
+      if (!panel) return;
+      panel.classList.remove("sp-toc-panel--dragging");
+      if (!moved) return;
       const current = panel.getBoundingClientRect();
       void chrome.storage.local.set({ [POSITION_KEY]: { left: current.left, top: current.top } });
     }
-    window.removeEventListener("pointermove", move);
-    window.removeEventListener("pointerup", up);
-  };
+  });
 
-  window.addEventListener("pointermove", move);
-  window.addEventListener("pointerup", up, { once: true });
+  stopActivePointerGesture = stop;
 }
 
 function startResize(event: PointerEvent, direction: ResizeDirection, handle: HTMLElement): void {
@@ -814,6 +826,7 @@ function startResize(event: PointerEvent, direction: ResizeDirection, handle: HT
 
   event.preventDefault();
   event.stopPropagation();
+  stopActivePointerGesture?.();
 
   const startRect = panel.getBoundingClientRect();
   const startRight = startRect.right;
@@ -823,39 +836,40 @@ function startResize(event: PointerEvent, direction: ResizeDirection, handle: HT
   const startY = event.clientY;
   let moved = false;
 
-  handle.setPointerCapture(event.pointerId);
+  pointerGestureActive = true;
   panel.classList.add("sp-toc-panel--resizing");
 
-  const move = (moveEvent: PointerEvent): void => {
-    if (!panel) return;
-    moved = true;
-    userAdjustedLayout = true;
-    const rawWidth =
-      direction === "sw" ? startWidth + (startX - moveEvent.clientX) : startWidth + (moveEvent.clientX - startX);
-    const rawHeight = startHeight + (moveEvent.clientY - startY);
-    const size = constrainSize(rawWidth, rawHeight);
-    const left = direction === "sw" ? startRight - size.width : startRect.left;
+  const { stop } = trackPointerGesture({
+    handle,
+    pointerId: event.pointerId,
+    onMove: (moveEvent) => {
+      if (!panel) return;
+      moved = true;
+      userAdjustedLayout = true;
+      const rawWidth =
+        direction === "sw" ? startWidth + (startX - moveEvent.clientX) : startWidth + (moveEvent.clientX - startX);
+      const rawHeight = startHeight + (moveEvent.clientY - startY);
+      const size = constrainSize(rawWidth, rawHeight);
+      const left = direction === "sw" ? startRight - size.width : startRect.left;
 
-    setPanelSize(size);
-    setPanelPosition(constrainPosition(left, startRect.top));
-  };
-
-  const up = (): void => {
-    if (!panel) return;
-    panel.classList.remove("sp-toc-panel--resizing");
-    if (moved) {
+      setPanelSize(size);
+      setPanelPosition(constrainPosition(left, startRect.top));
+    },
+    onEnd: () => {
+      pointerGestureActive = false;
+      stopActivePointerGesture = undefined;
+      if (!panel) return;
+      panel.classList.remove("sp-toc-panel--resizing");
+      if (!moved) return;
       const current = panel.getBoundingClientRect();
       void chrome.storage.local.set({
         [POSITION_KEY]: { left: current.left, top: current.top },
         [SIZE_KEY]: { width: current.width, height: current.height }
       });
     }
-    window.removeEventListener("pointermove", move);
-    window.removeEventListener("pointerup", up);
-  };
+  });
 
-  window.addEventListener("pointermove", move);
-  window.addEventListener("pointerup", up, { once: true });
+  stopActivePointerGesture = stop;
 }
 
 function constrainPosition(left: number, top: number): TocPosition {
@@ -906,7 +920,7 @@ function getCurrentPanelPosition(): TocPosition {
 }
 
 function keepPanelInViewport(): void {
-  if (!panel || panel.hidden) return;
+  if (!panel || panel.hidden || pointerGestureActive) return;
   if (!userAdjustedLayout) {
     applyDefaultLayout();
     return;
@@ -983,6 +997,7 @@ void (() => {
     window.removeEventListener("resize", handleViewportChange);
     window.visualViewport?.removeEventListener("resize", handleViewportChange);
     window.visualViewport?.removeEventListener("scroll", handleViewportChange);
+    stopActivePointerGesture?.();
     if (resizeTimer !== undefined) window.clearTimeout(resizeTimer);
     if (urlTimer !== undefined) window.clearInterval(urlTimer);
   });

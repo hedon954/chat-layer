@@ -3,7 +3,8 @@ import {
   constrainTocPosition,
   constrainTocSize,
   getDefaultTocHeight,
-  getDefaultTocLayout
+  getDefaultTocLayout,
+  resolveTocViewportLayout
 } from "../src/content/toc-position";
 
 describe("constrainTocPosition", () => {
@@ -77,6 +78,39 @@ describe("getDefaultTocLayout", () => {
     expect(getDefaultTocLayout({ width: 160, height: 800 }, 228, 120)).toEqual({
       position: { left: 0, top: 200 },
       size: { width: 160, height: 400 }
+    });
+  });
+});
+
+describe("resolveTocViewportLayout", () => {
+  const viewport = { width: 1280, height: 800 };
+  const defaultLayout = getDefaultTocLayout(viewport, 228, 120);
+
+  it("keeps the default right-edge dock until the user moves the panel", () => {
+    const widerViewport = { width: 1600, height: 800 };
+    expect(
+      resolveTocViewportLayout({
+        userMovedPanel: false,
+        currentPosition: { left: 100, top: 80 },
+        currentSize: { width: 228, height: 400 },
+        viewport: widerViewport,
+        defaultLayout: getDefaultTocLayout(widerViewport, 228, 120)
+      })
+    ).toEqual(getDefaultTocLayout(widerViewport, 228, 120));
+  });
+
+  it("preserves a user-moved position when the window grows", () => {
+    expect(
+      resolveTocViewportLayout({
+        userMovedPanel: true,
+        currentPosition: { left: 240, top: 96 },
+        currentSize: { width: 228, height: 400 },
+        viewport: { width: 1600, height: 800 },
+        defaultLayout
+      })
+    ).toEqual({
+      position: { left: 240, top: 96 },
+      size: { width: 228, height: 400 }
     });
   });
 });

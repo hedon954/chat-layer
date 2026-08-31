@@ -91,6 +91,24 @@ export function getDefaultTocLayout(
   return { position, size };
 }
 
+export function resolveTocViewportLayout(options: {
+  userMovedPanel: boolean;
+  currentPosition: TocPosition;
+  currentSize: TocSize;
+  viewport: TocViewport;
+  defaultLayout: TocLayout;
+}): TocLayout {
+  if (!options.userMovedPanel) {
+    return options.defaultLayout;
+  }
+
+  const size = constrainTocSize(options.currentSize, options.viewport);
+  return {
+    size,
+    position: constrainTocPosition(options.currentPosition, options.viewport, size)
+  };
+}
+
 function readPositiveNumber(value: number | undefined): number | undefined {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
 }
