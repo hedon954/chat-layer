@@ -60,24 +60,30 @@ describe("getDefaultTocHeight", () => {
 });
 
 describe("getDefaultTocLayout", () => {
-  it("docks the panel to the right edge and vertically centers it", () => {
+  it("docks the panel to the right with the same 8px gap as a manual drag", () => {
     expect(getDefaultTocLayout({ width: 1280, height: 800 }, 228, 120)).toEqual({
-      position: { left: 1052, top: 200 },
+      position: { left: 1044, top: 200 },
       size: { width: 228, height: 400 }
     });
   });
 
+  it("matches the right inset produced by dragging the panel to the right edge", () => {
+    const viewport = { width: 1280, height: 800 };
+    const dragged = constrainTocPosition({ left: 2000, top: 200 }, viewport, { width: 228, height: 400 });
+    expect(getDefaultTocLayout(viewport, 228, 120).position.left).toBe(dragged.left);
+  });
+
   it("keeps 10% viewport gaps when the panel reaches its maximum height", () => {
     expect(getDefaultTocLayout({ width: 1280, height: 800 }, 228, 900)).toEqual({
-      position: { left: 1052, top: 80 },
+      position: { left: 1044, top: 80 },
       size: { width: 228, height: 640 }
     });
   });
 
-  it("shrinks the panel width to fit a narrow viewport while staying flush right", () => {
+  it("shrinks the panel width to fit a narrow viewport while keeping the right gap", () => {
     expect(getDefaultTocLayout({ width: 160, height: 800 }, 228, 120)).toEqual({
-      position: { left: 0, top: 200 },
-      size: { width: 160, height: 400 }
+      position: { left: 8, top: 200 },
+      size: { width: 144, height: 400 }
     });
   });
 });
