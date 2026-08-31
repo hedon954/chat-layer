@@ -25,7 +25,7 @@ const MIN_PANEL_WIDTH = 180;
 const MIN_PANEL_HEIGHT = 120;
 const DEFAULT_HEIGHT_RATIO = 0.5;
 const MAX_HEIGHT_RATIO = 0.8;
-const DEFAULT_EDGE_MARGIN = 0;
+const DEFAULT_EDGE_MARGIN = DEFAULT_MARGIN;
 
 export function constrainTocPosition(
   position: TocPosition,
@@ -76,7 +76,8 @@ export function getDefaultTocLayout(
   contentHeight: number,
   collapsed = false
 ): TocLayout {
-  const width = clamp(readPositiveNumber(panelWidth) ?? DEFAULT_PANEL_WIDTH, 0, Math.max(0, viewport.width));
+  const maxWidth = Math.max(0, viewport.width - DEFAULT_EDGE_MARGIN * 2);
+  const width = clamp(readPositiveNumber(panelWidth) ?? DEFAULT_PANEL_WIDTH, 0, maxWidth);
   const height = getDefaultTocHeight(contentHeight, viewport, collapsed);
   const size = { width, height };
   const position = constrainTocPosition(
@@ -89,6 +90,24 @@ export function getDefaultTocLayout(
     DEFAULT_EDGE_MARGIN
   );
   return { position, size };
+}
+
+export function resolveTocViewportLayout(options: {
+  userMovedPanel: boolean;
+  currentPosition: TocPosition;
+  currentSize: TocSize;
+  viewport: TocViewport;
+  defaultLayout: TocLayout;
+}): TocLayout {
+  if (!options.userMovedPanel) {
+    return options.defaultLayout;
+  }
+
+  const size = constrainTocSize(options.currentSize, options.viewport);
+  return {
+    size,
+    position: constrainTocPosition(options.currentPosition, options.viewport, size)
+  };
 }
 
 function readPositiveNumber(value: number | undefined): number | undefined {

@@ -610,14 +610,14 @@
   position: fixed;
   z-index: 2147483640;
   top: 25vh;
-  right: 0;
+  right: 8px;
   display: flex;
   flex-direction: column;
-  width: min(228px, 100vw);
-  min-width: min(180px, 100vw);
+  width: min(228px, calc(100vw - 16px));
+  min-width: min(180px, calc(100vw - 16px));
   height: 50vh;
   max-height: 80vh;
-  max-width: 100vw;
+  max-width: calc(100vw - 16px);
   overflow: hidden;
   border: 1px solid rgb(15 23 42 / 10%);
   border-radius: 12px;
@@ -943,7 +943,7 @@
   position: fixed;
   z-index: 2147483640;
   top: 50%;
-  right: 0;
+  right: 8px;
   transform: translateY(-50%);
   width: 38px;
   height: 38px;
