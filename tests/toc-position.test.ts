@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { constrainTocPosition, constrainTocSize } from "../src/content/toc-position";
+import {
+  constrainTocPosition,
+  constrainTocSize,
+  getDefaultTocHeight,
+  getDefaultTocLayout
+} from "../src/content/toc-position";
 
 describe("constrainTocPosition", () => {
   it("keeps a panel inside the current viewport", () => {
@@ -34,6 +39,44 @@ describe("constrainTocSize", () => {
     expect(constrainTocSize({ width: 200, height: 200 }, { width: 120, height: 100 })).toEqual({
       width: 104,
       height: 84
+    });
+  });
+});
+
+describe("getDefaultTocHeight", () => {
+  it("uses half the viewport when content is shorter than the default height", () => {
+    expect(getDefaultTocHeight(120, { width: 1280, height: 800 })).toBe(400);
+  });
+
+  it("grows with content until 80% of the viewport", () => {
+    expect(getDefaultTocHeight(500, { width: 1280, height: 800 })).toBe(500);
+    expect(getDefaultTocHeight(900, { width: 1280, height: 800 })).toBe(640);
+  });
+
+  it("does not force the 50% minimum while the panel is collapsed", () => {
+    expect(getDefaultTocHeight(38, { width: 1280, height: 800 }, true)).toBe(38);
+  });
+});
+
+describe("getDefaultTocLayout", () => {
+  it("docks the panel to the right edge and vertically centers it", () => {
+    expect(getDefaultTocLayout({ width: 1280, height: 800 }, 228, 120)).toEqual({
+      position: { left: 1052, top: 200 },
+      size: { width: 228, height: 400 }
+    });
+  });
+
+  it("keeps 10% viewport gaps when the panel reaches its maximum height", () => {
+    expect(getDefaultTocLayout({ width: 1280, height: 800 }, 228, 900)).toEqual({
+      position: { left: 1052, top: 80 },
+      size: { width: 228, height: 640 }
+    });
+  });
+
+  it("shrinks the panel width to fit a narrow viewport while staying flush right", () => {
+    expect(getDefaultTocLayout({ width: 160, height: 800 }, 228, 120)).toEqual({
+      position: { left: 0, top: 200 },
+      size: { width: 160, height: 400 }
     });
   });
 });

@@ -609,14 +609,15 @@
 .sp-toc-panel {
   position: fixed;
   z-index: 2147483640;
-  top: 80px;
-  right: 12px;
+  top: 25vh;
+  right: 0;
   display: flex;
   flex-direction: column;
-  width: min(228px, calc(100vw - 24px));
-  min-width: 180px;
-  max-height: 70vh;
-  max-width: calc(100vw - 16px);
+  width: min(228px, 100vw);
+  min-width: min(180px, 100vw);
+  height: 50vh;
+  max-height: 80vh;
+  max-width: 100vw;
   overflow: hidden;
   border: 1px solid rgb(15 23 42 / 10%);
   border-radius: 12px;
@@ -941,8 +942,9 @@
 .sp-toc-trigger {
   position: fixed;
   z-index: 2147483640;
-  top: 84px;
-  right: 12px;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
   width: 38px;
   height: 38px;
   border-radius: 999px;
