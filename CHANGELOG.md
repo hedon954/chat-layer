@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The release workflow extracts the section matching the pushed tag and uses it
 as the GitHub Release body, so each version section should be self-contained.
 
+## [v0.5.2] — 2026-08-31
+
+This patch release stops the floating table of contents from following the
+cursor after a drag, and keeps a small gap when the panel docks to the right.
+
+### Highlights
+- Dragging the Contents panel now releases on mouse-up instead of staying
+  attached to the pointer.
+- After you move the panel in the current session, it no longer tracks the
+  window's right edge when the browser is resized.
+- Default right-dock uses the same 8px inset as dragging the panel to the
+  right edge.
+
+### Fixed
+- TOC drag left a window `pointermove` listener attached after pointer-up was
+  swallowed by ChatGPT or Gemini, so the panel kept following the cursor.
+- Default dock sat flush against the window instead of leaving the same gap
+  as a manual drag to the right.
+
+### Tooling
+- Synchronized `package.json`, `package-lock.json`, and the extension manifest
+  on version `0.5.2`.
+
+### Install
+1. Download `chatlayer-v0.5.2.zip` from the assets below and extract it.
+2. Open `chrome://extensions/` and enable **Developer mode**.
+3. Click **Load unpacked** and select the extracted folder.
+
+### Known limitations
+- Heading highlight still depends on rendered DOM elements. ChatGPT or Gemini
+  virtualized content must re-enter the DOM before its exact heading can become
+  active in the TOC.
+
 ## [v0.5.1] — 2026-08-31
 
 The floating table of contents now docks to the right edge of the browser on
