@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The release workflow extracts the section matching the pushed tag and uses it
 as the GitHub Release body, so each version section should be self-contained.
 
+## [v0.5.1] — 2026-08-31
+
+The floating table of contents now docks to the right edge of the browser on
+every page load, with a content-aware height that stays readable as a
+conversation grows.
+
+### Highlights
+- Default layout sits flush against the right edge and is vertically centered.
+- Default height is 50% of the viewport and grows with TOC content up to 80%
+  (10% gap above and below).
+- After the 80% cap, the existing inner scroll still applies.
+- Dragging or resizing leaves default layout for the rest of the session; a
+  reload restores the default.
+
+### Changed
+- ChatGPT and Gemini TOC panels no longer restore a stored position or size on
+  page enter or refresh.
+
+### Tooling
+- Synchronized `package.json`, `package-lock.json`, and the extension manifest
+  on version `0.5.1`.
+
+### Install
+1. Download `chatlayer-v0.5.1.zip` from the assets below and extract it.
+2. Open `chrome://extensions/` and enable **Developer mode**.
+3. Click **Load unpacked** and select the extracted folder.
+
+### Known limitations
+- Heading highlight still depends on rendered DOM elements. ChatGPT or Gemini
+  virtualized content must re-enter the DOM before its exact heading can become
+  active in the TOC.
+
 ## [v0.5.0] — 2026-08-18
 
 Reply labels in the floating table of contents now include a short preview of
