@@ -1,5 +1,11 @@
 import { loadSettings } from "../shared/settings";
-import { constrainTocPosition, constrainTocSize, type TocPosition, type TocSize } from "./toc-position";
+import {
+  constrainTocPosition,
+  constrainTocSize,
+  getDefaultTocLayout,
+  type TocPosition,
+  type TocSize
+} from "./toc-position";
 
 type TocHeading = {
   element: HTMLElement;
@@ -63,6 +69,7 @@ let initialized = false;
 let themeMode: TocThemeMode = "auto";
 let lastTocFingerprint = "";
 let resizeTimer: number | undefined;
+let userAdjustedLayout = false;
 
 export async function initChatGptToc(): Promise<void> {
   if (initialized) return;
@@ -73,8 +80,6 @@ export async function initChatGptToc(): Promise<void> {
 
   await waitForDocumentBody();
   createTocShell();
-  await restoreSize();
-  await restorePosition();
   await restoreThemeMode();
   observeThemeChanges();
   scheduleScan(INITIAL_SCAN_DELAY_MS);
@@ -186,6 +191,7 @@ function toggleCollapsed(button: HTMLButtonElement): void {
   const collapsed = panel.classList.toggle("sp-toc-panel--collapsed");
   button.textContent = collapsed ? "+" : "−";
   button.title = collapsed ? "Expand contents" : "Collapse contents";
+  keepPanelInViewport();
 }
 
 function closePanel(): void {
@@ -770,54 +776,31 @@ function setActiveNavItem(messageIndex: number): void {
   }
 }
 
-async function restorePosition(): Promise<void> {
-  if (!panel) return;
-  const stored = await chrome.storage.local.get(POSITION_KEY);
-  const value = stored[POSITION_KEY];
-  if (!isTocPosition(value)) return;
-  setPanelPosition(constrainPosition(value.left, value.top));
-}
-
-async function restoreSize(): Promise<void> {
-  if (!panel) return;
-  const stored = await chrome.storage.local.get(SIZE_KEY);
-  const value = stored[SIZE_KEY];
-  if (!isTocSize(value)) return;
-  setPanelSize(constrainSize(value.width, value.height));
-}
-
-function isTocPosition(value: unknown): value is TocPosition {
-  if (typeof value !== "object" || value === null) return false;
-  const position = value as Partial<TocPosition>;
-  return typeof position.left === "number" && typeof position.top === "number";
-}
-
-function isTocSize(value: unknown): value is TocSize {
-  if (typeof value !== "object" || value === null) return false;
-  const size = value as Partial<TocSize>;
-  return typeof size.width === "number" && typeof size.height === "number";
-}
-
 function startDrag(event: PointerEvent, handle: HTMLElement): void {
   if (!panel || event.button !== 0 || event.target instanceof HTMLButtonElement) return;
 
   const rect = panel.getBoundingClientRect();
   const offsetX = event.clientX - rect.left;
   const offsetY = event.clientY - rect.top;
+  let moved = false;
 
   handle.setPointerCapture(event.pointerId);
   panel.classList.add("sp-toc-panel--dragging");
 
   const move = (moveEvent: PointerEvent): void => {
     if (!panel) return;
+    moved = true;
+    userAdjustedLayout = true;
     setPanelPosition(constrainPosition(moveEvent.clientX - offsetX, moveEvent.clientY - offsetY));
   };
 
   const up = (): void => {
     if (!panel) return;
     panel.classList.remove("sp-toc-panel--dragging");
-    const current = panel.getBoundingClientRect();
-    void chrome.storage.local.set({ [POSITION_KEY]: { left: current.left, top: current.top } });
+    if (moved) {
+      const current = panel.getBoundingClientRect();
+      void chrome.storage.local.set({ [POSITION_KEY]: { left: current.left, top: current.top } });
+    }
     window.removeEventListener("pointermove", move);
     window.removeEventListener("pointerup", up);
   };
@@ -838,12 +821,15 @@ function startResize(event: PointerEvent, direction: ResizeDirection, handle: HT
   const startHeight = startRect.height;
   const startX = event.clientX;
   const startY = event.clientY;
+  let moved = false;
 
   handle.setPointerCapture(event.pointerId);
   panel.classList.add("sp-toc-panel--resizing");
 
   const move = (moveEvent: PointerEvent): void => {
     if (!panel) return;
+    moved = true;
+    userAdjustedLayout = true;
     const rawWidth =
       direction === "sw" ? startWidth + (startX - moveEvent.clientX) : startWidth + (moveEvent.clientX - startX);
     const rawHeight = startHeight + (moveEvent.clientY - startY);
@@ -857,11 +843,13 @@ function startResize(event: PointerEvent, direction: ResizeDirection, handle: HT
   const up = (): void => {
     if (!panel) return;
     panel.classList.remove("sp-toc-panel--resizing");
-    const current = panel.getBoundingClientRect();
-    void chrome.storage.local.set({
-      [POSITION_KEY]: { left: current.left, top: current.top },
-      [SIZE_KEY]: { width: current.width, height: current.height }
-    });
+    if (moved) {
+      const current = panel.getBoundingClientRect();
+      void chrome.storage.local.set({
+        [POSITION_KEY]: { left: current.left, top: current.top },
+        [SIZE_KEY]: { width: current.width, height: current.height }
+      });
+    }
     window.removeEventListener("pointermove", move);
     window.removeEventListener("pointerup", up);
   };
@@ -910,19 +898,53 @@ function getCurrentPanelPosition(): TocPosition {
   const rect = panel.getBoundingClientRect();
   const left = rect.width > 0 ? rect.left : Number.parseFloat(panel.style.left);
   const top = rect.height > 0 ? rect.top : Number.parseFloat(panel.style.top);
+  const fallbackHeight = rect.height || window.innerHeight * 0.5;
   return {
-    left: Number.isFinite(left) ? left : window.innerWidth - 228 - 12,
-    top: Number.isFinite(top) ? top : 80
+    left: Number.isFinite(left) ? left : window.innerWidth - 228,
+    top: Number.isFinite(top) ? top : (window.innerHeight - fallbackHeight) / 2
   };
 }
 
 function keepPanelInViewport(): void {
   if (!panel || panel.hidden) return;
+  if (!userAdjustedLayout) {
+    applyDefaultLayout();
+    return;
+  }
   if (hasCustomPanelSize()) {
     const size = constrainSize(getPanelSize().width, getPanelSize().height);
     setPanelSize(size);
   }
   setPanelPosition(constrainPosition(getCurrentPanelPosition().left, getCurrentPanelPosition().top));
+}
+
+function applyDefaultLayout(): void {
+  if (!panel || userAdjustedLayout || panel.hidden) return;
+
+  const viewport = { width: window.innerWidth, height: window.innerHeight };
+  const collapsed = panel.classList.contains("sp-toc-panel--collapsed");
+  const layout = getDefaultTocLayout(viewport, 228, measureNaturalPanelHeight(), collapsed);
+  setPanelSize(layout.size);
+  setPanelPosition(layout.position);
+}
+
+function measureNaturalPanelHeight(): number {
+  if (!panel) return 0;
+  if (panel.classList.contains("sp-toc-panel--collapsed")) {
+    const header = panel.querySelector<HTMLElement>(".sp-toc-header");
+    if (!header) return 0;
+    const borders = Math.max(0, panel.offsetHeight - panel.clientHeight);
+    return header.getBoundingClientRect().height + borders;
+  }
+
+  const previousHeight = panel.style.height;
+  const previousMaxHeight = panel.style.maxHeight;
+  panel.style.height = "auto";
+  panel.style.maxHeight = "none";
+  const height = panel.scrollHeight;
+  panel.style.height = previousHeight;
+  panel.style.maxHeight = previousMaxHeight;
+  return height;
 }
 
 function hasCustomPanelSize(): boolean {
