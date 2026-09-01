@@ -5,10 +5,16 @@ import type {
   FetchPlantUmlSvgResponse
 } from "../shared/plantuml-render";
 import { loadSettings } from "../shared/settings";
+import {
+  applyInlineDiagramViewToGroup,
+  type InlineDiagramView
+} from "./diagram-view";
 import { initChatGptToc } from "./toc-chatgpt";
 
 const BUTTON_CLASS = "sp-cgpt-btn";
 const CARD_CLASS = "sp-cgpt-card";
+const SOURCE_CLASS = "sp-cgpt-source";
+const SHOWING_DIAGRAM_CLASS = "sp-cgpt-showing-diagram";
 const PROCESSED_FLAG = "data-show-pic-cgpt";
 const SCAN_DEBOUNCE_MS = 200;
 const PLANTUML_LANGUAGES = new Set(["plantuml", "puml"]);
@@ -86,7 +92,11 @@ function findCodeBody(pre: HTMLElement): HTMLElement {
   if (sticky) {
     let sibling = sticky.nextElementSibling;
     while (sibling) {
-      if (sibling instanceof HTMLElement) {
+      if (
+        sibling instanceof HTMLElement &&
+        !sibling.classList.contains(CARD_CLASS) &&
+        !sibling.classList.contains(BUTTON_CLASS)
+      ) {
         const text = (sibling.textContent ?? "").trim();
         if (text.length > 0) return sibling;
       }
@@ -112,6 +122,11 @@ function attachButton(toolbar: HTMLElement, pre: HTMLElement): void {
 
 async function handleRenderClick(pre: HTMLElement, button: HTMLButtonElement): Promise<void> {
   const card = ensureCard(pre);
+  if (card.hasSvg() && card.root.hidden) {
+    card.showDiagram();
+    return;
+  }
+
   const body = findCodeBody(pre);
   const rawSource = extractSource(body);
   const source = normalizePlantUmlSource(rawSource);
@@ -141,10 +156,13 @@ async function handleRenderClick(pre: HTMLElement, button: HTMLButtonElement): P
 
 function extractSource(body: HTMLElement): string {
   const candidates: string[] = [];
-  const inner = typeof body.innerText === "string" ? body.innerText : "";
-  if (inner) candidates.push(inner);
-  const text = body.textContent ?? "";
-  if (text) candidates.push(text);
+  const containsInjected = Boolean(body.querySelector(`.${CARD_CLASS}, .${BUTTON_CLASS}`));
+  if (!containsInjected) {
+    const inner = typeof body.innerText === "string" ? body.innerText : "";
+    if (inner) candidates.push(inner);
+    const text = body.textContent ?? "";
+    if (text) candidates.push(text);
+  }
   candidates.push(walkBlockAware(body));
 
   let best = "";
@@ -195,6 +213,7 @@ function walkBlockAware(root: Node): string {
       return;
     }
     if (!(node instanceof Element)) return;
+    if (node.classList.contains(CARD_CLASS) || node.classList.contains(BUTTON_CLASS)) return;
     if (node.tagName === "BR") {
       buffer += "\n";
       return;
@@ -214,29 +233,114 @@ function walkBlockAware(root: Node): string {
 }
 
 function ensureCard(pre: HTMLElement): DiagramCard {
-  const sibling = pre.nextElementSibling;
-  if (sibling instanceof HTMLElement && sibling.classList.contains(CARD_CLASS)) {
-    const existing = (sibling as DiagramCardElement).__card;
-    if (existing) return existing;
+  const sourceContent = findCodeBody(pre);
+  const existingRoot = findCardRoot(pre, sourceContent);
+  if (existingRoot) {
+    const existing = (existingRoot as DiagramCardElement).__card;
+    if (existing) {
+      placeCard(pre, sourceContent, existingRoot);
+      return existing;
+    }
   }
-  const card = createCard();
-  pre.insertAdjacentElement("afterend", card.root);
+
+  const card = createCard(pre, sourceContent);
+  placeCard(pre, sourceContent, card.root);
   (card.root as DiagramCardElement).__card = card;
   return card;
+}
+
+function findCardRoot(pre: HTMLElement, sourceContent: HTMLElement): HTMLElement | null {
+  const afterSource = sourceContent.nextElementSibling;
+  if (afterSource instanceof HTMLElement && afterSource.classList.contains(CARD_CLASS)) {
+    return afterSource;
+  }
+
+  const inside = pre.querySelector<HTMLElement>(`:scope > .${CARD_CLASS}`);
+  if (inside) {
+    return inside;
+  }
+
+  const afterPre = pre.nextElementSibling;
+  if (afterPre instanceof HTMLElement && afterPre.classList.contains(CARD_CLASS)) {
+    return afterPre;
+  }
+
+  return null;
+}
+
+function placeCard(pre: HTMLElement, sourceContent: HTMLElement, cardRoot: HTMLElement): void {
+  if (sourceContent !== pre) {
+    if (sourceContent.nextElementSibling !== cardRoot) {
+      sourceContent.insertAdjacentElement("afterend", cardRoot);
+    }
+    return;
+  }
+
+  const sticky = findStickyHeader(pre);
+  if (sticky && cardRoot.previousElementSibling !== sticky) {
+    sticky.insertAdjacentElement("afterend", cardRoot);
+    return;
+  }
+
+  if (cardRoot.parentElement !== pre) {
+    pre.append(cardRoot);
+  }
+}
+
+function findStickyHeader(pre: HTMLElement): HTMLElement | null {
+  return (
+    pre.querySelector<HTMLElement>(":scope > .sticky") ??
+    pre.querySelector<HTMLElement>(':scope > [class*="sticky"]')
+  );
+}
+
+function collectSourceElements(pre: HTMLElement, sourceContent: HTMLElement, cardRoot: HTMLElement): HTMLElement[] {
+  const elements =
+    sourceContent !== pre
+      ? [sourceContent]
+      : Array.from(pre.children).filter((child): child is HTMLElement => {
+          return (
+            child instanceof HTMLElement &&
+            child !== cardRoot &&
+            !child.classList.contains(CARD_CLASS) &&
+            !isToolbarLike(child)
+          );
+        });
+
+  for (const element of elements) {
+    element.classList.add(SOURCE_CLASS);
+  }
+  return elements;
+}
+
+function isToolbarLike(element: HTMLElement): boolean {
+  if (element.classList.contains("sticky")) {
+    return true;
+  }
+  const className = typeof element.className === "string" ? element.className : "";
+  return className.includes("sticky");
+}
+
+function setDiagramView(pre: HTMLElement, sourceContent: HTMLElement, cardRoot: HTMLElement, view: InlineDiagramView): void {
+  applyInlineDiagramViewToGroup(collectSourceElements(pre, sourceContent, cardRoot), cardRoot, view);
+  pre.classList.toggle(SHOWING_DIAGRAM_CLASS, view === "diagram");
 }
 
 type DiagramCardElement = HTMLElement & { __card?: DiagramCard };
 
 type DiagramCard = {
   root: HTMLElement;
+  hasSvg: () => boolean;
+  showDiagram: () => void;
   setLoading: () => void;
   setSvg: (svg: string) => void;
   setError: (message: string) => void;
 };
 
-function createCard(): DiagramCard {
+function createCard(pre: HTMLElement, sourceContent: HTMLElement): DiagramCard {
   const root = document.createElement("div");
   root.className = CARD_CLASS;
+  root.hidden = true;
 
   const controls = document.createElement("div");
   controls.className = `${CARD_CLASS}__controls`;
@@ -248,10 +352,10 @@ function createCard(): DiagramCard {
   const zoomReset = makeBtn("1:1", "Reset");
   const zoomIn = makeBtn("+", "Zoom in");
   const fitBtn = makeBtn("Fit", "Fit width");
+  const sourceBtn = makeBtn("Source", "Show source");
   const downloadBtn = makeBtn("Download", "Download SVG");
-  const closeBtn = makeBtn("Close", "Hide diagram");
 
-  controls.append(zoomOut, zoomLabel, zoomReset, zoomIn, fitBtn, downloadBtn, closeBtn);
+  controls.append(zoomOut, zoomLabel, zoomReset, zoomIn, fitBtn, sourceBtn, downloadBtn);
 
   const viewport = document.createElement("div");
   viewport.className = `${CARD_CLASS}__viewport`;
@@ -295,8 +399,8 @@ function createCard(): DiagramCard {
   zoomIn.addEventListener("click", () => setScale(scale + 0.2));
   zoomReset.addEventListener("click", reset);
   fitBtn.addEventListener("click", fit);
-  closeBtn.addEventListener("click", () => {
-    root.hidden = true;
+  sourceBtn.addEventListener("click", () => {
+    setDiagramView(pre, sourceContent, root, "source");
   });
   downloadBtn.addEventListener("click", () => {
     if (!latestSvg) return;
@@ -342,23 +446,29 @@ function createCard(): DiagramCard {
     drag = null;
   });
 
+  const showDiagram = (): void => {
+    setDiagramView(pre, sourceContent, root, "diagram");
+  };
+
   return {
     root,
+    hasSvg: () => latestSvg.length > 0,
+    showDiagram,
     setLoading: () => {
-      root.hidden = false;
+      showDiagram();
       canvas.className = `${CARD_CLASS}__canvas ${CARD_CLASS}__canvas--message`;
       canvas.textContent = "Rendering diagram...";
     },
     setSvg: (svg) => {
       latestSvg = svg;
-      root.hidden = false;
+      showDiagram();
       canvas.className = `${CARD_CLASS}__canvas`;
       canvas.innerHTML = svg;
       reset();
       requestAnimationFrame(fit);
     },
     setError: (message) => {
-      root.hidden = false;
+      showDiagram();
       canvas.className = `${CARD_CLASS}__canvas ${CARD_CLASS}__canvas--error`;
       canvas.textContent = message;
     }

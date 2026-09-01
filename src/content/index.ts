@@ -2,6 +2,7 @@ import "./styles.css";
 
 import { startChatGptIntegration } from "./chatgpt";
 import { detectDiagram, extractLanguageHints, type DetectedDiagram } from "./detector";
+import { applyInlineDiagramView } from "./diagram-view";
 import { renderMermaidDiagram } from "./mermaid-client";
 import { PLATFORM, shouldRenderDiagram } from "./platform";
 import { initGeminiToc } from "./toc-gemini";
@@ -633,8 +634,7 @@ function pickActionContainer(header: HTMLElement): HTMLElement | null {
 function getOrCreateInlineSurface(block: HTMLElement): InlineDiagramSurface {
   const existing = renderSurfaces.get(block);
   if (existing) {
-    existing.root.hidden = false;
-    existing.sourceContent.hidden = true;
+    applyInlineDiagramView(existing.sourceContent, existing.root, "diagram");
     return existing;
   }
 
@@ -666,7 +666,7 @@ function getOrCreateInlineSurface(block: HTMLElement): InlineDiagramSurface {
 
   root.append(controls, viewport);
   sourceContent.insertAdjacentElement("afterend", root);
-  sourceContent.hidden = true;
+  applyInlineDiagramView(sourceContent, root, "diagram");
 
   let scale = 1;
   let translateX = 0;
@@ -695,8 +695,7 @@ function getOrCreateInlineSurface(block: HTMLElement): InlineDiagramSurface {
   zoomInButton.addEventListener("click", () => setScale(scale + 0.25));
   resetButton.addEventListener("click", resetView);
   sourceButton.addEventListener("click", () => {
-    root.hidden = true;
-    sourceContent.hidden = false;
+    applyInlineDiagramView(sourceContent, root, "source");
   });
   downloadButton.addEventListener("click", () => downloadSvg(latestSvg));
 
@@ -747,8 +746,7 @@ function getOrCreateInlineSurface(block: HTMLElement): InlineDiagramSurface {
     canvas,
     zoomLabel,
     setLoading: () => {
-      sourceContent.hidden = true;
-      root.hidden = false;
+      applyInlineDiagramView(sourceContent, root, "diagram");
       canvas.className = "sp-inline-diagram__canvas sp-inline-diagram__canvas--message";
       canvas.textContent = "Rendering diagram...";
     },
