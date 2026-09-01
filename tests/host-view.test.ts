@@ -94,7 +94,7 @@ describe("host diagram coverage", () => {
     const title = fakeElement("title-span");
     title.style.setProperty("color", "rgb(255, 255, 255)");
     const header = fakeElement("code-block-decoration header-formatted", [title]);
-    header.querySelectorAll = () => [title];
+    header.querySelectorAll = (() => [title]) as unknown as typeof header.querySelectorAll;
     const shell = fakeElement("formatted-code-block-internal-container", [header, pre]);
     shell.style.setProperty("background", "rgb(0, 0, 0)");
     header.style.setProperty("background", "rgb(0, 0, 0)");

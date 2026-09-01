@@ -79,14 +79,18 @@ export function collectDiagramHosts(sourceContent: HTMLElement, sourceBlock: HTM
   return [...new Set([...chrome.shells, ...chrome.headers])];
 }
 
+function isHostChrome(hosts: readonly HTMLElement[] | DiagramHostChrome): hosts is DiagramHostChrome {
+  return !Array.isArray(hosts);
+}
+
 export function setHostShowingDiagram(
   hosts: readonly HTMLElement[] | DiagramHostChrome,
   showing: boolean,
   sourceContent?: HTMLElement
 ): void {
-  const chrome = Array.isArray(hosts)
-    ? { shells: [...hosts], headers: sourceContent ? collectHeaderSiblingsInto(hosts, sourceContent) : [] }
-    : hosts;
+  const chrome: DiagramHostChrome = isHostChrome(hosts)
+    ? hosts
+    : { shells: [...hosts], headers: sourceContent ? collectHeaderSiblingsInto(hosts, sourceContent) : [] };
 
   for (const shell of chrome.shells) {
     toggleHost(shell, showing);
