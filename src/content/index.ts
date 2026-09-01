@@ -4,6 +4,7 @@ import { startChatGptIntegration } from "./chatgpt";
 import { detectDiagram, extractLanguageHints, type DetectedDiagram } from "./detector";
 import { applyDiagramSize } from "./diagram-size";
 import { applyInlineDiagramView } from "./diagram-view";
+import { collectDiagramHosts, setHostShowingDiagram } from "./host-view";
 import { resolveActionContainer } from "./toolbar";
 import { renderMermaidDiagram } from "./mermaid-client";
 import { PLATFORM, shouldRenderDiagram } from "./platform";
@@ -43,6 +44,8 @@ type InlineDiagramSurface = {
   sourceContent: HTMLElement;
   canvas: HTMLElement;
   zoomLabel: HTMLElement;
+  showDiagram: () => void;
+  showSource: () => void;
   setLoading: () => void;
   setSvg: (svg: string) => void;
   setError: (message: string) => void;
@@ -636,7 +639,7 @@ function pickActionContainer(header: HTMLElement): HTMLElement | null {
 function getOrCreateInlineSurface(block: HTMLElement): InlineDiagramSurface {
   const existing = renderSurfaces.get(block);
   if (existing) {
-    applyInlineDiagramView(existing.sourceContent, existing.root, "diagram");
+    existing.showDiagram();
     return existing;
   }
 
@@ -668,7 +671,17 @@ function getOrCreateInlineSurface(block: HTMLElement): InlineDiagramSurface {
 
   root.append(controls, viewport);
   sourceContent.insertAdjacentElement("afterend", root);
-  applyInlineDiagramView(sourceContent, root, "diagram");
+
+  const hosts = collectDiagramHosts(sourceContent, sourceBlock);
+  const showDiagram = (): void => {
+    applyInlineDiagramView(sourceContent, root, "diagram");
+    setHostShowingDiagram(hosts, true);
+  };
+  const showSource = (): void => {
+    applyInlineDiagramView(sourceContent, root, "source");
+    setHostShowingDiagram(hosts, false);
+  };
+  showDiagram();
 
   let scale = 1;
   let translateX = 0;
@@ -697,7 +710,7 @@ function getOrCreateInlineSurface(block: HTMLElement): InlineDiagramSurface {
   zoomInButton.addEventListener("click", () => setScale(scale + 0.25));
   resetButton.addEventListener("click", resetView);
   sourceButton.addEventListener("click", () => {
-    applyInlineDiagramView(sourceContent, root, "source");
+    showSource();
   });
   downloadButton.addEventListener("click", () => downloadSvg(latestSvg));
 
@@ -747,8 +760,10 @@ function getOrCreateInlineSurface(block: HTMLElement): InlineDiagramSurface {
     sourceContent,
     canvas,
     zoomLabel,
+    showDiagram,
+    showSource,
     setLoading: () => {
-      applyInlineDiagramView(sourceContent, root, "diagram");
+      showDiagram();
       viewport.style.height = "";
       canvas.className = "sp-inline-diagram__canvas sp-inline-diagram__canvas--message";
       canvas.textContent = "Rendering diagram...";

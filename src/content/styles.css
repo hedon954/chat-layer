@@ -199,14 +199,26 @@
   background: #6d28d9;
 }
 
-.sp-code-render-button--in-toolbar {
+.sp-code-render-button--in-toolbar,
+.sp-code-render-button--in-toolbar.sp-code-render-button--plantuml {
   align-self: center;
-  margin: 0 0 0 8px;
-  padding: 2px 8px;
-  min-height: 22px;
-  font-size: 11px;
-  font-weight: 600;
-  border-radius: 6px;
+  height: 32px;
+  min-height: 32px;
+  margin: 0;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.sp-code-render-button--in-toolbar:hover,
+.sp-code-render-button--in-toolbar.sp-code-render-button--plantuml:hover {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  color: inherit;
 }
 
 .sp-inline-diagram {
@@ -228,6 +240,38 @@ pre[hidden] + .sp-inline-diagram {
   border: 0;
   border-radius: 0;
   box-shadow: none;
+}
+
+.sp-host-showing-diagram {
+  background: #ffffff !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  color: #0f172a !important;
+}
+
+.sp-host-showing-diagram [class*="header"] {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.sp-host-showing-diagram [class*="header"] [class*="buttons"] {
+  display: flex !important;
+  align-items: center !important;
+  gap: 2px;
+}
+
+.sp-host-showing-diagram [class*="header"] button,
+.sp-host-showing-diagram [class*="header"] .mat-icon,
+.sp-host-showing-diagram [class*="header"] [class*="icon"] {
+  color: #0f172a !important;
+}
+
+.sp-host-showing-diagram .sp-inline-diagram {
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
 .sp-inline-diagram__controls {
