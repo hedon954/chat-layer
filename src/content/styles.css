@@ -199,26 +199,33 @@
   background: #6d28d9;
 }
 
+.sp-native-toolbar {
+  display: flex !important;
+  align-items: center !important;
+}
+
 .sp-code-render-button--in-toolbar,
 .sp-code-render-button--in-toolbar.sp-code-render-button--plantuml {
+  appearance: none;
   align-self: center;
-  height: 32px;
-  min-height: 32px;
-  margin: 0;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: inherit;
-  box-shadow: none;
+  margin: 0 !important;
+  padding: 0 8px !important;
+  min-height: 0 !important;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent !important;
+  color: inherit !important;
+  box-shadow: none !important;
   font-size: 12px;
   font-weight: 500;
+  line-height: 1 !important;
+  transform: none !important;
 }
 
 .sp-code-render-button--in-toolbar:hover,
 .sp-code-render-button--in-toolbar.sp-code-render-button--plantuml:hover {
-  background: color-mix(in srgb, currentColor 12%, transparent);
-  color: inherit;
+  background: color-mix(in srgb, currentColor 12%, transparent) !important;
+  color: inherit !important;
 }
 
 .sp-inline-diagram {
@@ -242,33 +249,8 @@ pre[hidden] + .sp-inline-diagram {
   box-shadow: none;
 }
 
-.sp-host-showing-diagram {
-  background: #ffffff !important;
-  padding: 0 !important;
-  overflow: hidden !important;
-  color: #0f172a !important;
-}
-
-.sp-host-showing-diagram [class*="header"] {
-  background: #f8fafc !important;
-  color: #0f172a !important;
-  border-bottom: 1px solid #e2e8f0 !important;
-}
-
-.sp-host-showing-diagram [class*="header"] [class*="buttons"] {
-  display: flex !important;
-  align-items: center !important;
-  gap: 2px;
-}
-
-.sp-host-showing-diagram [class*="header"] button,
-.sp-host-showing-diagram [class*="header"] .mat-icon,
-.sp-host-showing-diagram [class*="header"] [class*="icon"] {
-  color: #0f172a !important;
-}
-
 .sp-host-showing-diagram .sp-inline-diagram {
-  margin: 0 !important;
+  margin-top: 0 !important;
   border: 0 !important;
   border-radius: 0 !important;
   box-shadow: none !important;

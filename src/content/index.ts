@@ -4,8 +4,8 @@ import { startChatGptIntegration } from "./chatgpt";
 import { detectDiagram, extractLanguageHints, type DetectedDiagram } from "./detector";
 import { applyDiagramSize } from "./diagram-size";
 import { applyInlineDiagramView } from "./diagram-view";
-import { collectDiagramHosts, setHostShowingDiagram } from "./host-view";
-import { resolveActionContainer } from "./toolbar";
+import { collectDiagramHosts, flushDiagramIntoHost, resetDiagramHostFlush, setHostShowingDiagram } from "./host-view";
+import { alignToolbarButton, resolveActionContainer } from "./toolbar";
 import { renderMermaidDiagram } from "./mermaid-client";
 import { PLATFORM, shouldRenderDiagram } from "./platform";
 import { initGeminiToc } from "./toc-gemini";
@@ -334,6 +334,7 @@ function attachRenderButton(block: HTMLElement, diagram: DetectedDiagram, render
   if (toolbar) {
     button.classList.add("sp-code-render-button--in-toolbar");
     toolbar.append(button);
+    requestAnimationFrame(() => alignToolbarButton(button, toolbar));
   } else {
     sourceBlock.classList.add("sp-code-block-with-button");
     sourceBlock.append(button);
@@ -676,10 +677,17 @@ function getOrCreateInlineSurface(block: HTMLElement): InlineDiagramSurface {
   const showDiagram = (): void => {
     applyInlineDiagramView(sourceContent, root, "diagram");
     setHostShowingDiagram(hosts, true);
+    const flushHost =
+      sourceContent.closest<HTMLElement>("[class*='code-block'], [class*='codeBlock']") ??
+      sourceContent.parentElement;
+    if (flushHost) {
+      flushDiagramIntoHost(root, flushHost);
+    }
   };
   const showSource = (): void => {
     applyInlineDiagramView(sourceContent, root, "source");
     setHostShowingDiagram(hosts, false);
+    resetDiagramHostFlush(root);
   };
   showDiagram();
 

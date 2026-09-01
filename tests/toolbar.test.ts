@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveActionContainer } from "../src/content/toolbar";
+import { resolveActionContainer, toolbarButtonInlineStyles } from "../src/content/toolbar";
 
 function element(tag: string, className = "", children: HTMLElement[] = []): HTMLElement {
   const node = {
@@ -52,6 +52,23 @@ describe("resolveActionContainer", () => {
     const header = element("div", "header-formatted", [buttons]);
 
     expect(resolveActionContainer(copyButton, header)).toBe(buttons);
+  });
+
+  it("matches the native toolbar button height and color", () => {
+    expect(
+      toolbarButtonInlineStyles({
+        height: "40px",
+        color: "rgb(228, 228, 228)"
+      })
+    ).toMatchObject({
+      height: "40px",
+      minHeight: "40px",
+      maxHeight: "40px",
+      color: "rgb(228, 228, 228)",
+      background: "transparent",
+      display: "inline-flex",
+      alignItems: "center"
+    });
   });
 
   it("lifts a single-button wrapper to its parent when no button group exists", () => {
