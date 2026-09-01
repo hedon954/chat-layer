@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_DIAGRAM_MAX_HEIGHT,
+  FIT_WIDTH_MAX_HEIGHT,
   measureCompactDiagramSize,
+  measureFitWidthDiagramSize,
   parseSvgViewBoxSize
 } from "../src/content/diagram-size";
 
@@ -53,5 +55,46 @@ describe("compact diagram sizing", () => {
         maxHeight: DEFAULT_DIAGRAM_MAX_HEIGHT
       })
     ).toEqual({ width: 600, height: 100 });
+  });
+});
+
+describe("fit-width diagram sizing", () => {
+  it("fills the available width and keeps the aspect ratio", () => {
+    expect(
+      measureFitWidthDiagramSize({
+        sourceWidth: 715,
+        sourceHeight: 488,
+        maxWidth: 700,
+        maxHeight: FIT_WIDTH_MAX_HEIGHT
+      })
+    ).toEqual({
+      width: 700,
+      height: 488 * (700 / 715)
+    });
+  });
+
+  it("upscales a small diagram to fill the code block width", () => {
+    expect(
+      measureFitWidthDiagramSize({
+        sourceWidth: 400,
+        sourceHeight: 200,
+        maxWidth: 700,
+        maxHeight: FIT_WIDTH_MAX_HEIGHT
+      })
+    ).toEqual({ width: 700, height: 350 });
+  });
+
+  it("caps extremely tall diagrams", () => {
+    expect(
+      measureFitWidthDiagramSize({
+        sourceWidth: 200,
+        sourceHeight: 2000,
+        maxWidth: 700,
+        maxHeight: FIT_WIDTH_MAX_HEIGHT
+      })
+    ).toEqual({
+      width: 200 * (FIT_WIDTH_MAX_HEIGHT / 2000),
+      height: FIT_WIDTH_MAX_HEIGHT
+    });
   });
 });

@@ -2,8 +2,9 @@ import "./styles.css";
 
 import { startChatGptIntegration } from "./chatgpt";
 import { detectDiagram, extractLanguageHints, type DetectedDiagram } from "./detector";
-import { applyCompactDiagramSize } from "./diagram-size";
+import { applyDiagramSize } from "./diagram-size";
 import { applyInlineDiagramView } from "./diagram-view";
+import { resolveActionContainer } from "./toolbar";
 import { renderMermaidDiagram } from "./mermaid-client";
 import { PLATFORM, shouldRenderDiagram } from "./platform";
 import { initGeminiToc } from "./toc-gemini";
@@ -629,7 +630,7 @@ function pickActionContainer(header: HTMLElement): HTMLElement | null {
   }
 
   const last = usable[usable.length - 1];
-  return last?.parentElement ?? header;
+  return last ? resolveActionContainer(last, header) : header;
 }
 
 function getOrCreateInlineSurface(block: HTMLElement): InlineDiagramSurface {
@@ -760,7 +761,7 @@ function getOrCreateInlineSurface(block: HTMLElement): InlineDiagramSurface {
       requestAnimationFrame(() => {
         const rendered = canvas.querySelector("svg");
         if (rendered instanceof SVGSVGElement) {
-          applyCompactDiagramSize(rendered, viewport);
+          applyDiagramSize(rendered, viewport, "fit-width");
         }
       });
     },
