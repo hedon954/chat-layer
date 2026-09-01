@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  HIDDEN_VIEW_CLASS,
   applyInlineDiagramView,
   applyInlineDiagramViewToGroup,
   readInlineDiagramView
@@ -46,6 +47,32 @@ describe("inline source/diagram view", () => {
 
     expect(sources.every((source) => !source.hidden)).toBe(true);
     expect(diagram.hidden).toBe(true);
+  });
+
+  it("forces the diagram display off so flex styles cannot keep it visible", () => {
+    const classes = new Set<string>();
+    const diagram = {
+      hidden: false,
+      style: { display: "flex" },
+      classList: {
+        toggle(name: string, force?: boolean) {
+          if (force) classes.add(name);
+          else classes.delete(name);
+        }
+      }
+    };
+
+    applyInlineDiagramView({ hidden: true }, diagram, "source");
+
+    expect(diagram.hidden).toBe(true);
+    expect(diagram.style.display).toBe("none");
+    expect(classes.has(HIDDEN_VIEW_CLASS)).toBe(true);
+
+    applyInlineDiagramView({ hidden: false }, diagram, "diagram");
+
+    expect(diagram.hidden).toBe(false);
+    expect(diagram.style.display).toBe("");
+    expect(classes.has(HIDDEN_VIEW_CLASS)).toBe(false);
   });
 
   it("treats both visible or both hidden as an invalid split view", () => {

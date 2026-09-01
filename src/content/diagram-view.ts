@@ -1,7 +1,15 @@
+export const HIDDEN_VIEW_CLASS = "sp-view-hidden";
+
 export type InlineDiagramView = "source" | "diagram";
 
 export type ToggleableElement = {
   hidden: boolean | string;
+  classList?: {
+    toggle(name: string, force?: boolean): unknown;
+  };
+  style?: {
+    display?: string;
+  };
 };
 
 export function applyInlineDiagramView(
@@ -21,7 +29,15 @@ export function applyInlineDiagramViewToGroup(
   for (const source of sourceElements) {
     source.hidden = showDiagram;
   }
-  diagram.hidden = !showDiagram;
+  setDiagramHidden(diagram, !showDiagram);
+}
+
+function setDiagramHidden(diagram: ToggleableElement, hidden: boolean): void {
+  diagram.hidden = hidden;
+  diagram.classList?.toggle(HIDDEN_VIEW_CLASS, hidden);
+  if (diagram.style) {
+    diagram.style.display = hidden ? "none" : "";
+  }
 }
 
 export function readInlineDiagramView(

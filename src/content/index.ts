@@ -2,7 +2,15 @@ import "./styles.css";
 
 import { startChatGptIntegration } from "./chatgpt";
 import { detectDiagram, extractLanguageHints, type DetectedDiagram } from "./detector";
+import { applyDiagramSize } from "./diagram-size";
 import { applyInlineDiagramView } from "./diagram-view";
+import {
+  collectDiagramChrome,
+  flushDiagramIntoHost,
+  resetDiagramHostFlush,
+  setHostShowingDiagram
+} from "./host-view";
+import { alignToolbarButton, resolveActionContainer } from "./toolbar";
 import { renderMermaidDiagram } from "./mermaid-client";
 import { PLATFORM, shouldRenderDiagram } from "./platform";
 import { initGeminiToc } from "./toc-gemini";
@@ -41,6 +49,8 @@ type InlineDiagramSurface = {
   sourceContent: HTMLElement;
   canvas: HTMLElement;
   zoomLabel: HTMLElement;
+  showDiagram: () => void;
+  showSource: () => void;
   setLoading: () => void;
   setSvg: (svg: string) => void;
   setError: (message: string) => void;
@@ -329,6 +339,7 @@ function attachRenderButton(block: HTMLElement, diagram: DetectedDiagram, render
   if (toolbar) {
     button.classList.add("sp-code-render-button--in-toolbar");
     toolbar.append(button);
+    requestAnimationFrame(() => alignToolbarButton(button, toolbar));
   } else {
     sourceBlock.classList.add("sp-code-block-with-button");
     sourceBlock.append(button);
@@ -628,13 +639,13 @@ function pickActionContainer(header: HTMLElement): HTMLElement | null {
   }
 
   const last = usable[usable.length - 1];
-  return last?.parentElement ?? header;
+  return last ? resolveActionContainer(last, header) : header;
 }
 
 function getOrCreateInlineSurface(block: HTMLElement): InlineDiagramSurface {
   const existing = renderSurfaces.get(block);
   if (existing) {
-    applyInlineDiagramView(existing.sourceContent, existing.root, "diagram");
+    existing.showDiagram();
     return existing;
   }
 
@@ -666,7 +677,46 @@ function getOrCreateInlineSurface(block: HTMLElement): InlineDiagramSurface {
 
   root.append(controls, viewport);
   sourceContent.insertAdjacentElement("afterend", root);
-  applyInlineDiagramView(sourceContent, root, "diagram");
+
+  const chrome = collectDiagramChrome(sourceContent, sourceBlock);
+  const refreshHeaderButton = (): void => {
+    const toolbar =
+      findToolbar(sourceBlock) ??
+      sourceBlock.querySelector<HTMLElement>(".sp-native-toolbar, [class*='buttons']");
+    const headerButton =
+      toolbar?.querySelector<HTMLButtonElement>(".sp-code-render-button") ??
+      sourceBlock.querySelector<HTMLButtonElement>(".sp-code-render-button");
+    if (toolbar && headerButton) {
+      alignToolbarButton(headerButton, toolbar);
+    }
+  };
+  const paintHostSurface = (showing: boolean): void => {
+    setHostShowingDiagram(chrome, showing);
+    const host = sourceContent.parentElement ?? sourceBlock;
+    if (showing) {
+      flushDiagramIntoHost(root, host);
+    } else {
+      resetDiagramHostFlush(root);
+    }
+  };
+  const showDiagram = (): void => {
+    applyInlineDiagramView(sourceContent, root, "diagram");
+    paintHostSurface(true);
+    requestAnimationFrame(() => {
+      paintHostSurface(true);
+      refreshHeaderButton();
+      const svg = canvas.querySelector("svg");
+      if (svg instanceof SVGSVGElement) {
+        applyDiagramSize(svg, viewport, "fit-width");
+      }
+    });
+  };
+  const showSource = (): void => {
+    applyInlineDiagramView(sourceContent, root, "source");
+    paintHostSurface(false);
+    requestAnimationFrame(() => refreshHeaderButton());
+  };
+  showDiagram();
 
   let scale = 1;
   let translateX = 0;
@@ -695,7 +745,7 @@ function getOrCreateInlineSurface(block: HTMLElement): InlineDiagramSurface {
   zoomInButton.addEventListener("click", () => setScale(scale + 0.25));
   resetButton.addEventListener("click", resetView);
   sourceButton.addEventListener("click", () => {
-    applyInlineDiagramView(sourceContent, root, "source");
+    showSource();
   });
   downloadButton.addEventListener("click", () => downloadSvg(latestSvg));
 
@@ -745,8 +795,11 @@ function getOrCreateInlineSurface(block: HTMLElement): InlineDiagramSurface {
     sourceContent,
     canvas,
     zoomLabel,
+    showDiagram,
+    showSource,
     setLoading: () => {
-      applyInlineDiagramView(sourceContent, root, "diagram");
+      showDiagram();
+      viewport.style.height = "";
       canvas.className = "sp-inline-diagram__canvas sp-inline-diagram__canvas--message";
       canvas.textContent = "Rendering diagram...";
     },
@@ -755,8 +808,15 @@ function getOrCreateInlineSurface(block: HTMLElement): InlineDiagramSurface {
       canvas.className = "sp-inline-diagram__canvas";
       canvas.innerHTML = svg;
       resetView();
+      requestAnimationFrame(() => {
+        const rendered = canvas.querySelector("svg");
+        if (rendered instanceof SVGSVGElement) {
+          applyDiagramSize(rendered, viewport, "fit-width");
+        }
+      });
     },
     setError: (message) => {
+      viewport.style.height = "";
       canvas.className = "sp-inline-diagram__canvas sp-inline-diagram__canvas--error";
       canvas.textContent = message;
     }
