@@ -2,16 +2,14 @@ export const HOST_SHOWING_DIAGRAM_CLASS = "sp-host-showing-diagram";
 
 export function collectDiagramHosts(sourceContent: HTMLElement, sourceBlock: HTMLElement): HTMLElement[] {
   const hosts = new Set<HTMLElement>([sourceBlock]);
-  const parent = sourceContent.parentElement;
-  if (parent) {
-    hosts.add(parent);
+  let current: HTMLElement | null = sourceContent.parentElement;
+  for (let depth = 0; depth < 5 && current; depth += 1) {
+    const className = typeof current.className === "string" ? current.className : "";
+    if (/(?:^|[^-])(?:code-block|codeBlock|formatted-code)/u.test(className)) {
+      hosts.add(current);
+    }
+    current = current.parentElement;
   }
-
-  const container = sourceContent.closest<HTMLElement>("[class*='code-block'], [class*='codeBlock']");
-  if (container) {
-    hosts.add(container);
-  }
-
   return [...hosts];
 }
 

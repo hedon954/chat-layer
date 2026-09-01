@@ -4,7 +4,7 @@ import { startChatGptIntegration } from "./chatgpt";
 import { detectDiagram, extractLanguageHints, type DetectedDiagram } from "./detector";
 import { applyDiagramSize } from "./diagram-size";
 import { applyInlineDiagramView } from "./diagram-view";
-import { collectDiagramHosts, flushDiagramIntoHost, resetDiagramHostFlush, setHostShowingDiagram } from "./host-view";
+import { collectDiagramHosts, resetDiagramHostFlush, setHostShowingDiagram } from "./host-view";
 import { alignToolbarButton, resolveActionContainer } from "./toolbar";
 import { renderMermaidDiagram } from "./mermaid-client";
 import { PLATFORM, shouldRenderDiagram } from "./platform";
@@ -674,20 +674,29 @@ function getOrCreateInlineSurface(block: HTMLElement): InlineDiagramSurface {
   sourceContent.insertAdjacentElement("afterend", root);
 
   const hosts = collectDiagramHosts(sourceContent, sourceBlock);
+  const refreshHeaderButton = (): void => {
+    const toolbar = sourceBlock.querySelector<HTMLElement>(".sp-native-toolbar, [class*='buttons']");
+    const headerButton = sourceBlock.querySelector<HTMLButtonElement>(".sp-code-render-button");
+    if (toolbar && headerButton) {
+      alignToolbarButton(headerButton, toolbar);
+    }
+  };
   const showDiagram = (): void => {
     applyInlineDiagramView(sourceContent, root, "diagram");
     setHostShowingDiagram(hosts, true);
-    const flushHost =
-      sourceContent.closest<HTMLElement>("[class*='code-block'], [class*='codeBlock']") ??
-      sourceContent.parentElement;
-    if (flushHost) {
-      flushDiagramIntoHost(root, flushHost);
-    }
+    requestAnimationFrame(() => {
+      refreshHeaderButton();
+      const svg = canvas.querySelector("svg");
+      if (svg instanceof SVGSVGElement) {
+        applyDiagramSize(svg, viewport, "fit-width");
+      }
+    });
   };
   const showSource = (): void => {
     applyInlineDiagramView(sourceContent, root, "source");
     setHostShowingDiagram(hosts, false);
     resetDiagramHostFlush(root);
+    requestAnimationFrame(() => refreshHeaderButton());
   };
   showDiagram();
 
