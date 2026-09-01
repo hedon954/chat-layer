@@ -5,6 +5,7 @@ import type {
   FetchPlantUmlSvgResponse
 } from "../shared/plantuml-render";
 import { loadSettings } from "../shared/settings";
+import { applyCompactDiagramSize } from "./diagram-size";
 import {
   applyInlineDiagramViewToGroup,
   type InlineDiagramView
@@ -456,6 +457,7 @@ function createCard(pre: HTMLElement, sourceContent: HTMLElement): DiagramCard {
     showDiagram,
     setLoading: () => {
       showDiagram();
+      viewport.style.height = "";
       canvas.className = `${CARD_CLASS}__canvas ${CARD_CLASS}__canvas--message`;
       canvas.textContent = "Rendering diagram...";
     },
@@ -465,10 +467,16 @@ function createCard(pre: HTMLElement, sourceContent: HTMLElement): DiagramCard {
       canvas.className = `${CARD_CLASS}__canvas`;
       canvas.innerHTML = svg;
       reset();
-      requestAnimationFrame(fit);
+      requestAnimationFrame(() => {
+        const rendered = canvas.querySelector("svg");
+        if (rendered instanceof SVGSVGElement) {
+          applyCompactDiagramSize(rendered, viewport);
+        }
+      });
     },
     setError: (message) => {
       showDiagram();
+      viewport.style.height = "";
       canvas.className = `${CARD_CLASS}__canvas ${CARD_CLASS}__canvas--error`;
       canvas.textContent = message;
     }

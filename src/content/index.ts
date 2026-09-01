@@ -2,6 +2,7 @@ import "./styles.css";
 
 import { startChatGptIntegration } from "./chatgpt";
 import { detectDiagram, extractLanguageHints, type DetectedDiagram } from "./detector";
+import { applyCompactDiagramSize } from "./diagram-size";
 import { applyInlineDiagramView } from "./diagram-view";
 import { renderMermaidDiagram } from "./mermaid-client";
 import { PLATFORM, shouldRenderDiagram } from "./platform";
@@ -747,6 +748,7 @@ function getOrCreateInlineSurface(block: HTMLElement): InlineDiagramSurface {
     zoomLabel,
     setLoading: () => {
       applyInlineDiagramView(sourceContent, root, "diagram");
+      viewport.style.height = "";
       canvas.className = "sp-inline-diagram__canvas sp-inline-diagram__canvas--message";
       canvas.textContent = "Rendering diagram...";
     },
@@ -755,8 +757,15 @@ function getOrCreateInlineSurface(block: HTMLElement): InlineDiagramSurface {
       canvas.className = "sp-inline-diagram__canvas";
       canvas.innerHTML = svg;
       resetView();
+      requestAnimationFrame(() => {
+        const rendered = canvas.querySelector("svg");
+        if (rendered instanceof SVGSVGElement) {
+          applyCompactDiagramSize(rendered, viewport);
+        }
+      });
     },
     setError: (message) => {
+      viewport.style.height = "";
       canvas.className = "sp-inline-diagram__canvas sp-inline-diagram__canvas--error";
       canvas.textContent = message;
     }
