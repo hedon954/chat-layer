@@ -28,6 +28,24 @@ function readableHeight(element: HTMLElement): string | null {
   return height;
 }
 
+function readableColor(element: HTMLElement | null): string | null {
+  if (!element) {
+    return null;
+  }
+  const color = getComputedStyle(element).color;
+  if (!color || color === "rgba(0, 0, 0, 0)" || color === "transparent") {
+    return null;
+  }
+  return color;
+}
+
+export function readToolbarLabelColor(toolbar: HTMLElement): string {
+  const header = toolbar.closest<HTMLElement>("[class*='header']") ?? toolbar.parentElement;
+  const title = header?.querySelector<HTMLElement>(":scope > span");
+  const icon = toolbar.querySelector<HTMLElement>(".mat-icon, mat-icon, [data-mat-icon-name]");
+  return readableColor(title ?? null) ?? readableColor(icon) ?? "inherit";
+}
+
 export function readToolbarReferenceMetrics(toolbar: HTMLElement): ToolbarMetrics | null {
   const host = toolbar.querySelector<HTMLElement>("gem-icon-button, [class*='icon-button']");
   const nativeButton = toolbar.querySelector<HTMLElement>("button:not(.sp-code-render-button)");
@@ -36,11 +54,21 @@ export function readToolbarReferenceMetrics(toolbar: HTMLElement): ToolbarMetric
     return null;
   }
 
-  const colorSource = nativeButton ?? host;
   return {
     height,
-    color: colorSource ? getComputedStyle(colorSource).color : "inherit"
+    color: readToolbarLabelColor(toolbar)
   };
+}
+
+export const HEADER_TITLE_INSET = "10px";
+
+export function insetHeaderTitle(toolbar: HTMLElement): void {
+  const header = toolbar.closest<HTMLElement>("[class*='header']") ?? toolbar.parentElement;
+  const title = header?.querySelector<HTMLElement>(":scope > span");
+  if (!title) {
+    return;
+  }
+  title.style.setProperty("padding-left", HEADER_TITLE_INSET);
 }
 
 export function toolbarButtonInlineStyles(metrics: ToolbarMetrics): Record<string, string> {
@@ -68,6 +96,7 @@ export function alignToolbarButton(button: HTMLElement, toolbar: HTMLElement): v
   toolbar.classList.add("sp-native-toolbar");
   toolbar.style.setProperty("display", "flex", "important");
   toolbar.style.setProperty("align-items", "center", "important");
+  insetHeaderTitle(toolbar);
 
   const metrics = readToolbarReferenceMetrics(toolbar);
   if (!metrics) {
@@ -76,6 +105,7 @@ export function alignToolbarButton(button: HTMLElement, toolbar: HTMLElement): v
 
   const styles = toolbarButtonInlineStyles(metrics);
   for (const [property, value] of Object.entries(styles)) {
-    button.style.setProperty(property.replace(/[A-Z]/gu, (letter) => `-${letter.toLowerCase()}`), value);
+    const cssName = property.replace(/[A-Z]/gu, (letter) => `-${letter.toLowerCase()}`);
+    button.style.setProperty(cssName, value, cssName === "color" ? "important" : undefined);
   }
 }

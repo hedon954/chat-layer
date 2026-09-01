@@ -214,7 +214,6 @@
   border: 0 !important;
   border-radius: 0;
   background: transparent !important;
-  color: inherit !important;
   box-shadow: none !important;
   font-size: 12px;
   font-weight: 500;
@@ -225,7 +224,6 @@
 .sp-code-render-button--in-toolbar:hover,
 .sp-code-render-button--in-toolbar.sp-code-render-button--plantuml:hover {
   background: color-mix(in srgb, currentColor 12%, transparent) !important;
-  color: inherit !important;
 }
 
 .sp-inline-diagram {

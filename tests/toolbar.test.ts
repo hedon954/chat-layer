@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveActionContainer, toolbarButtonInlineStyles } from "../src/content/toolbar";
+import { HEADER_TITLE_INSET, resolveActionContainer, toolbarButtonInlineStyles } from "../src/content/toolbar";
 
 function element(tag: string, className = "", children: HTMLElement[] = []): HTMLElement {
   const node = {
@@ -52,6 +52,10 @@ describe("resolveActionContainer", () => {
     const header = element("div", "header-formatted", [buttons]);
 
     expect(resolveActionContainer(copyButton, header)).toBe(buttons);
+  });
+
+  it("uses a 10px title inset so the header label is not clipped", () => {
+    expect(HEADER_TITLE_INSET).toBe("10px");
   });
 
   it("matches the native toolbar button height and color", () => {
