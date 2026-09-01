@@ -1,7 +1,7 @@
 export type InlineDiagramView = "source" | "diagram";
 
 export type ToggleableElement = {
-  hidden: boolean;
+  hidden: boolean | string;
 };
 
 export function applyInlineDiagramView(
@@ -28,8 +28,10 @@ export function readInlineDiagramView(
   source: ToggleableElement,
   diagram: ToggleableElement
 ): InlineDiagramView | "invalid" {
-  if (source.hidden === diagram.hidden) {
+  const sourceHidden = Boolean(source.hidden);
+  const diagramHidden = Boolean(diagram.hidden);
+  if (sourceHidden === diagramHidden) {
     return "invalid";
   }
-  return diagram.hidden ? "source" : "diagram";
+  return diagramHidden ? "source" : "diagram";
 }
