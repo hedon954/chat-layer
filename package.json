@@ -1,6 +1,6 @@
 {
   "name": "chatlayer",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "private": true,
   "description": "Power-user enhancement layer for AI chat interfaces.",
   "type": "module",

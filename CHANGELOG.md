@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The release workflow extracts the section matching the pushed tag and uses it
 as the GitHub Release body, so each version section should be self-contained.
 
+## [v0.5.4] — 2026-09-01
+
+This patch release keeps default PlantUML cards compact on ChatGPT, and makes
+Gemini diagrams replace the native code block as one light surface that can
+toggle back to source without leaving the rendered image behind.
+
+### Highlights
+- ChatGPT PlantUML now sizes the diagram around its content instead of leaving
+  a tall empty canvas.
+- Gemini PlantUML fills the code-block width and paints the host chrome as a
+  single light surface, so the black header no longer frames a white diagram.
+- The Gemini header **PlantUML** control stays aligned with Download and Copy,
+  and 「代码段」 stays inset from the left edge.
+- Clicking **Source** hides the rendered diagram completely; clicking
+  **PlantUML** again restores the in-place diagram.
+
+### Changed
+- ChatGPT uses a compact default diagram height.
+- Gemini uses width-fitting diagram sizing so sequence diagrams are not
+  stamped into a small centered box.
+
+### Fixed
+- Gemini Source view left the PlantUML surface visible because `display: flex`
+  overrode the `hidden` attribute.
+- Gemini code-block chrome stayed black around the white diagram after render.
+- Gemini header title could be clipped when the diagram host padding was
+  removed.
+
+### Tooling
+- Synchronized `package.json`, `package-lock.json`, and the extension manifest
+  on version `0.5.4`.
+
+### Install
+1. Download `chatlayer-v0.5.4.zip` from the assets below and extract it.
+2. Open `chrome://extensions/` and enable **Developer mode**.
+3. Click **Load unpacked** and select the extracted folder.
+
+### Known limitations
+- Heading highlight still depends on rendered DOM elements. ChatGPT or Gemini
+  virtualized content must re-enter the DOM before its exact heading can become
+  active in the TOC.
+
 ## [v0.5.3] — 2026-09-01
 
 This patch release makes ChatGPT PlantUML rendering switch source and diagram

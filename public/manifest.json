@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ChatLayer",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "Add outlines, diagrams, and workflow tools to AI chatbots.",
   "icons": {
     "16": "icons/chatlayer-16.png",
