@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The release workflow extracts the section matching the pushed tag and uses it
 as the GitHub Release body, so each version section should be self-contained.
 
+## [v0.5.3] — 2026-09-01
+
+This patch release makes ChatGPT PlantUML rendering switch source and diagram
+in the same code block, matching the existing Gemini behavior.
+
+### Highlights
+- ChatGPT no longer inserts a separate PlantUML card below the original source.
+- Clicking **PlantUML** hides the source and shows the diagram in that same
+  code block.
+- Clicking **Source** on the diagram toolbar restores the original source;
+  clicking **PlantUML** again returns to the already-rendered diagram.
+
+### Fixed
+- ChatGPT PlantUML source and diagram were shown as two stacked views instead
+  of one in-place toggle.
+
+### Tooling
+- Synchronized `package.json`, `package-lock.json`, and the extension manifest
+  on version `0.5.3`.
+
+### Install
+1. Download `chatlayer-v0.5.3.zip` from the assets below and extract it.
+2. Open `chrome://extensions/` and enable **Developer mode**.
+3. Click **Load unpacked** and select the extracted folder.
+
+### Known limitations
+- Heading highlight still depends on rendered DOM elements. ChatGPT or Gemini
+  virtualized content must re-enter the DOM before its exact heading can become
+  active in the TOC.
+
 ## [v0.5.2] — 2026-08-31
 
 This patch release stops the floating table of contents from following the
