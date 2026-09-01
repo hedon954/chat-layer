@@ -4,7 +4,12 @@ import { startChatGptIntegration } from "./chatgpt";
 import { detectDiagram, extractLanguageHints, type DetectedDiagram } from "./detector";
 import { applyDiagramSize } from "./diagram-size";
 import { applyInlineDiagramView } from "./diagram-view";
-import { collectDiagramHosts, resetDiagramHostFlush, setHostShowingDiagram } from "./host-view";
+import {
+  collectDiagramChrome,
+  flushDiagramIntoHost,
+  resetDiagramHostFlush,
+  setHostShowingDiagram
+} from "./host-view";
 import { alignToolbarButton, resolveActionContainer } from "./toolbar";
 import { renderMermaidDiagram } from "./mermaid-client";
 import { PLATFORM, shouldRenderDiagram } from "./platform";
@@ -673,18 +678,32 @@ function getOrCreateInlineSurface(block: HTMLElement): InlineDiagramSurface {
   root.append(controls, viewport);
   sourceContent.insertAdjacentElement("afterend", root);
 
-  const hosts = collectDiagramHosts(sourceContent, sourceBlock);
+  const chrome = collectDiagramChrome(sourceContent, sourceBlock);
   const refreshHeaderButton = (): void => {
-    const toolbar = sourceBlock.querySelector<HTMLElement>(".sp-native-toolbar, [class*='buttons']");
-    const headerButton = sourceBlock.querySelector<HTMLButtonElement>(".sp-code-render-button");
+    const toolbar =
+      findToolbar(sourceBlock) ??
+      sourceBlock.querySelector<HTMLElement>(".sp-native-toolbar, [class*='buttons']");
+    const headerButton =
+      toolbar?.querySelector<HTMLButtonElement>(".sp-code-render-button") ??
+      sourceBlock.querySelector<HTMLButtonElement>(".sp-code-render-button");
     if (toolbar && headerButton) {
       alignToolbarButton(headerButton, toolbar);
     }
   };
+  const paintHostSurface = (showing: boolean): void => {
+    setHostShowingDiagram(chrome, showing);
+    const host = sourceContent.parentElement ?? sourceBlock;
+    if (showing) {
+      flushDiagramIntoHost(root, host);
+    } else {
+      resetDiagramHostFlush(root);
+    }
+  };
   const showDiagram = (): void => {
     applyInlineDiagramView(sourceContent, root, "diagram");
-    setHostShowingDiagram(hosts, true);
+    paintHostSurface(true);
     requestAnimationFrame(() => {
+      paintHostSurface(true);
       refreshHeaderButton();
       const svg = canvas.querySelector("svg");
       if (svg instanceof SVGSVGElement) {
@@ -694,8 +713,7 @@ function getOrCreateInlineSurface(block: HTMLElement): InlineDiagramSurface {
   };
   const showSource = (): void => {
     applyInlineDiagramView(sourceContent, root, "source");
-    setHostShowingDiagram(hosts, false);
-    resetDiagramHostFlush(root);
+    paintHostSurface(false);
     requestAnimationFrame(() => refreshHeaderButton());
   };
   showDiagram();

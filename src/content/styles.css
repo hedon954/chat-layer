@@ -247,27 +247,42 @@ pre[hidden] + .sp-inline-diagram {
   box-shadow: none;
 }
 
-.sp-host-showing-diagram {
+.sp-host-showing-diagram,
+.sp-host-showing-diagram[data-sp-surface="shell"],
+[data-sp-surface="shell"] {
   background: #ffffff !important;
+  background-color: #ffffff !important;
+  background-image: none !important;
   padding-right: 0 !important;
   padding-bottom: 0 !important;
   padding-left: 0 !important;
   color: #0f172a !important;
 }
 
-.sp-host-showing-diagram [class*="header"] {
+.sp-host-showing-diagram [class*="header"],
+.sp-host-showing-diagram [class*="header-formatted"],
+.sp-host-showing-diagram [class*="code-block-decoration"],
+[data-sp-surface="header"] {
   background: #ffffff !important;
+  background-color: #ffffff !important;
+  background-image: none !important;
   color: #0f172a !important;
   padding-top: 10px !important;
   padding-right: 12px !important;
   padding-bottom: 10px !important;
   padding-left: 16px !important;
+  border: 0 !important;
+  box-shadow: none !important;
 }
 
 .sp-host-showing-diagram [class*="header"] span,
 .sp-host-showing-diagram [class*="header"] button,
 .sp-host-showing-diagram [class*="header"] .mat-icon,
-.sp-host-showing-diagram [class*="header"] [class*="icon"] {
+.sp-host-showing-diagram [class*="header"] [class*="icon"],
+[data-sp-surface="header"] span,
+[data-sp-surface="header"] button,
+[data-sp-surface="header"] .mat-icon,
+[data-sp-surface="header"] [class*="icon"] {
   color: #0f172a !important;
 }
 
