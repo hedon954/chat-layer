@@ -226,6 +226,13 @@
   background: color-mix(in srgb, currentColor 12%, transparent) !important;
 }
 
+.sp-inline-diagram[hidden],
+.sp-inline-diagram.sp-view-hidden,
+.sp-cgpt-card[hidden],
+.sp-cgpt-card.sp-view-hidden {
+  display: none !important;
+}
+
 .sp-inline-diagram {
   display: flex;
   flex-direction: column;
