@@ -1,3 +1,4 @@
+import { mergeChatGptHeadings } from "./toc-chatgpt-headings";
 import { loadSettings } from "../shared/settings";
 import { trackPointerGesture } from "./toc-pointer";
 import {
@@ -242,21 +243,7 @@ function mergeFreshIntoCache(freshMessages: TocMessage[]): void {
     const existing = messageCache.get(msg.scrollTarget);
     if (existing) {
       if (msg.userPreview) existing.userPreview = msg.userPreview;
-      const freshMap = new Map(msg.headings.map((h) => [`${h.level}\0${h.text}`, h.element]));
-      for (const cached of existing.headings) {
-        const key = `${cached.level}\0${cached.text}`;
-        const freshEl = freshMap.get(key);
-        if (freshEl) {
-          cached.element = freshEl;
-          freshMap.delete(key);
-        } else if (cached.element && !cached.element.isConnected) {
-          cached.element = null;
-        }
-      }
-      for (const [key, el] of freshMap) {
-        const [level, text] = key.split("\0");
-        existing.headings.push({ level: Number(level), text, element: el });
-      }
+      existing.headings = mergeChatGptHeadings(existing.headings, msg.headings);
     } else {
       messageCache.set(msg.scrollTarget, {
         scrollTarget: msg.scrollTarget,

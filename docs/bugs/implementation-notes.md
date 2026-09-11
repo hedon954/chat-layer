@@ -201,6 +201,32 @@ server and is required by Manifest V3's CSP.
 
 ---
 
+## 9. TOC discovery order is not document order
+
+The heading cache used to append every newly discovered `(level, text)` pair.
+If virtualization mounted a parent after its children, the parent appeared at
+the end of the TOC. A level change created a second entry instead of updating
+the original, while repeated headings could reconnect to the wrong element.
+
+**Resolution.** Each platform now reconciles headings by element identity,
+then by level/text occurrence, with a unique-text fallback for level changes.
+Currently mounted headings follow DOM order; unmatched virtualized headings
+remain cached around known anchors. Existing cached objects are updated in
+place so navigation callbacks keep their current targets.
+
+`tests/toc-headings.test.ts` covers both platforms, including late parents,
+level changes, streaming text on the same element, repeated labels, reordered
+nodes, partial snapshots, full virtualization, and repeated scans.
+
+This is a cache correction, not semantic inference: indentation still follows
+the source `h1`–`h6` tags. A heading remounted with both a new element and new
+text cannot reliably be distinguished from new content in a partial snapshot.
+
+**Acceptance TODO.** Obtain the conversation behind the reported MHA/MQA/GQA
+screenshot and compare its source heading levels with the rebuilt TOC in
+Chrome. Local tests and a successful build do not establish that the
+screenshot's uneven indentation is caused by this cache bug.
+
 ## TL;DR for future contributors
 
 1. Do not collapse the ChatGPT and Gemini integrations back together.
