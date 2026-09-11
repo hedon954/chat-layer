@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The release workflow extracts the section matching the pushed tag and uses it
 as the GitHub Release body, so each version section should be self-contained.
 
+## [v0.5.5] — 2026-09-12
+
+This patch release keeps the ChatGPT and Gemini table of contents in document
+order as headings are discovered, updated, or remounted during a conversation.
+
+### Highlights
+- Newly discovered parent headings appear before their cached children.
+- Recognized headings update their cached levels and navigation targets.
+- Repeated heading labels retain separate navigation targets.
+
+### Fixed
+- Newly mounted headings were appended to the end of a reply's TOC regardless
+  of their position in the document.
+- A recognized heading changing level could leave an obsolete entry behind.
+- Streaming text updates on the same heading element created duplicate entries.
+- Repeated labels could reconnect cached headings to the wrong DOM elements.
+
+### Tooling
+- Added 18 focused heading-cache regression cases across ChatGPT and Gemini.
+- Synchronized `package.json`, `package-lock.json`, and the extension manifest
+  on version `0.5.5`.
+
+### Install
+1. Download `chatlayer-v0.5.5.zip` from the assets below and extract it.
+2. Open `chrome://extensions/` and enable **Developer mode**.
+3. Click **Load unpacked** and select the extracted folder.
+
+### Known limitations
+- TOC indentation follows the page's heading tags. Inconsistent source heading
+  levels are not automatically corrected by semantic inference.
+- A heading remounted with both a new element and new text cannot reliably be
+  distinguished from new content in a partial DOM snapshot.
+- Heading highlight and exact navigation still depend on virtualized content
+  re-entering the DOM.
+
 ## [v0.5.4] — 2026-09-01
 
 This patch release keeps default PlantUML cards compact on ChatGPT, and makes
