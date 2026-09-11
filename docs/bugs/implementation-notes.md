@@ -222,10 +222,18 @@ This is a cache correction, not semantic inference: indentation still follows
 the source `h1`–`h6` tags. A heading remounted with both a new element and new
 text cannot reliably be distinguished from new content in a partial snapshot.
 
-**Acceptance TODO.** Obtain the conversation behind the reported MHA/MQA/GQA
-screenshot and compare its source heading levels with the rebuilt TOC in
-Chrome. Local tests and a successful build do not establish that the
-screenshot's uneven indentation is caused by this cache bug.
+**Screenshot diagnosis (2026-09-12).** Inspected the reported conversation in
+Chrome and compared its rendered heading tags with the installed TOC's
+`data-level` values and computed padding. MHA is `h3` (36px), MQA is `h2`
+(24px), and GQA is `h1` (12px). In the later system-prompt reply, numbered
+section 1 is `h2`, sections 2–5 are `h1`, and L0–L4 are `h3`.
+
+The screenshots therefore show inconsistent heading levels in the ChatGPT
+page itself, faithfully reflected by the TOC. They do not reproduce the cache
+bug above. This inspection verifies the cause of the screenshot indentation;
+it is not browser acceptance of the separate cache reconciliation change.
+Automatically aligning semantically related headings would require a separate
+product rule, especially for unnumbered headings such as MHA/MQA/GQA.
 
 ## TL;DR for future contributors
 
