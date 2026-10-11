@@ -574,18 +574,21 @@ pre[hidden] + .sp-inline-diagram {
   white-space: normal;
 }
 
-pre.sp-cgpt-showing-diagram {
+pre.sp-cgpt-showing-diagram,
+.sp-cgpt-showing-diagram {
   height: auto !important;
   min-height: 0 !important;
   grid-template-rows: auto !important;
   align-content: start;
 }
 
-pre.sp-cgpt-showing-diagram .sp-cgpt-source {
+pre.sp-cgpt-showing-diagram .sp-cgpt-source,
+.sp-cgpt-showing-diagram > .sp-cgpt-source {
   display: none !important;
 }
 
-pre:has(> .sp-cgpt-card) > .sp-cgpt-card {
+pre:has(> .sp-cgpt-card) > .sp-cgpt-card,
+.sp-cgpt-showing-diagram > .sp-cgpt-card {
   margin: 0;
   border-width: 1px 0 0;
   border-radius: 0 0 12px 12px;

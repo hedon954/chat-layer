@@ -5,6 +5,7 @@ import type {
   FetchPlantUmlSvgResponse
 } from "../shared/plantuml-render";
 import { loadSettings } from "../shared/settings";
+import { detectDiagram } from "./detector";
 import { applyCompactDiagramSize } from "./diagram-size";
 import {
   applyInlineDiagramViewToGroup,
@@ -18,7 +19,9 @@ const SOURCE_CLASS = "sp-cgpt-source";
 const SHOWING_DIAGRAM_CLASS = "sp-cgpt-showing-diagram";
 const PROCESSED_FLAG = "data-show-pic-cgpt";
 const SCAN_DEBOUNCE_MS = 200;
+const CODE_BLOCK_SELECTOR = '[data-markdown-copy="code-block"]';
 const PLANTUML_LANGUAGES = new Set(["plantuml", "puml"]);
+const PLAIN_TEXT_LANGUAGES = new Set(["", "plain", "text", "txt", "plaintext"]);
 
 export function startChatGptIntegration(): void {
   console.info("[ChatLayer] ChatGPT integration active.");
@@ -41,57 +44,107 @@ function scheduleScan(): void {
 }
 
 function scan(): void {
-  for (const pre of Array.from(document.querySelectorAll<HTMLPreElement>("pre"))) {
-    if (pre.getAttribute(PROCESSED_FLAG) === "1") continue;
-    const language = readLanguageLabel(pre);
-    if (!PLANTUML_LANGUAGES.has(language)) continue;
+  for (const block of collectCodeBlocks()) {
+    const marked = block.getAttribute(PROCESSED_FLAG) === "1";
+    if (marked && block.querySelector(`.${BUTTON_CLASS}`)) continue;
 
-    const toolbar = findToolbar(pre);
+    const language = readLanguageLabel(block);
+    if (!shouldOfferPlantUml(block, language)) continue;
+
+    const toolbar = findToolbar(block);
     if (!toolbar) continue;
 
     if (!toolbar.querySelector(`.${BUTTON_CLASS}`)) {
-      attachButton(toolbar, pre);
+      attachButton(toolbar, block);
     }
-    pre.setAttribute(PROCESSED_FLAG, "1");
+    block.setAttribute(PROCESSED_FLAG, "1");
   }
 }
 
-function readLanguageLabel(pre: HTMLElement): string {
+function collectCodeBlocks(): HTMLElement[] {
+  const blocks: HTMLElement[] = [];
+  const seen = new Set<HTMLElement>();
+  const add = (element: HTMLElement | null): void => {
+    if (!element || seen.has(element) || element.closest(`.${CARD_CLASS}`)) return;
+    seen.add(element);
+    blocks.push(element);
+  };
+
+  for (const block of Array.from(document.querySelectorAll<HTMLElement>(CODE_BLOCK_SELECTOR))) {
+    add(block);
+  }
+  for (const pre of Array.from(document.querySelectorAll<HTMLPreElement>("pre"))) {
+    if (pre.closest(CODE_BLOCK_SELECTOR)) continue;
+    add(pre);
+  }
+  return blocks;
+}
+
+function shouldOfferPlantUml(block: HTMLElement, language: string): boolean {
+  if (PLANTUML_LANGUAGES.has(language)) return true;
+  if (!PLAIN_TEXT_LANGUAGES.has(language)) return false;
+  const code = block.querySelector("pre code, code");
+  const text = code?.textContent ?? block.textContent ?? "";
+  return detectDiagram(text)?.type === "plantuml";
+}
+
+function readLanguageLabel(block: HTMLElement): string {
+  const header = findStickyHeader(block);
+  if (header) {
+    const label = readHeaderLanguage(header);
+    if (label) return label;
+  }
+
   const candidates: (Element | null)[] = [
-    pre.querySelector("[class*='justify-self-start']"),
-    pre.querySelector(".sticky [class*='font-medium']"),
-    pre.querySelector("[class*='sticky'] [class*='font-medium']")
+    block.querySelector("[class*='justify-self-start']"),
+    block.querySelector(".sticky [class*='font-medium']"),
+    block.querySelector("[class*='sticky'] [class*='font-medium']")
   ];
   for (const candidate of candidates) {
     if (!candidate) continue;
-    const text = (candidate.textContent ?? "").trim().toLowerCase();
-    if (text.length === 0 || text.length > 24) continue;
-    return text.split(/\s+/u)[0] ?? text;
+    const label = normalizeLanguageLabel(candidate.textContent ?? "");
+    if (label) return label;
   }
   return "";
 }
 
-function findToolbar(pre: HTMLElement): HTMLElement | null {
-  const actions = pre.querySelector<HTMLElement>("[class*='justify-self-end']");
-  if (actions) return actions;
-  const sticky =
-    pre.querySelector<HTMLElement>(".sticky") ?? pre.querySelector<HTMLElement>("[class*='sticky']");
-  if (sticky) {
-    const buttons = sticky.querySelectorAll<HTMLButtonElement>("button");
-    if (buttons.length > 0) {
-      const last = buttons[buttons.length - 1];
-      return last?.parentElement ?? sticky;
-    }
-    return sticky;
+function readHeaderLanguage(header: HTMLElement): string {
+  for (const candidate of Array.from(header.querySelectorAll<HTMLElement>("div, span"))) {
+    if (candidate.children.length > 0 || candidate.closest("button")) continue;
+    const label = normalizeLanguageLabel(candidate.textContent ?? "");
+    if (label) return label;
   }
-  return null;
+  return "";
 }
 
-function findCodeBody(pre: HTMLElement): HTMLElement {
-  const sticky =
-    pre.querySelector<HTMLElement>(".sticky") ?? pre.querySelector<HTMLElement>("[class*='sticky']");
-  if (sticky) {
-    let sibling = sticky.nextElementSibling;
+function normalizeLanguageLabel(value: string): string {
+  const normalized = value.trim().toLowerCase().replace(/[_-]+/gu, " ");
+  if (!normalized || normalized.length > 32) return "";
+  if (normalized === "plain text" || normalized === "plaintext") return "plain";
+  return normalized.split(/\s+/u)[0] ?? "";
+}
+
+function findToolbar(block: HTMLElement): HTMLElement | null {
+  const actions = block.querySelector<HTMLElement>("[class*='justify-self-end']");
+  if (actions) return actions;
+
+  const header = findStickyHeader(block);
+  if (!header) return null;
+  const buttons = Array.from(header.querySelectorAll<HTMLButtonElement>("button")).filter(
+    (button) => !button.classList.contains(BUTTON_CLASS)
+  );
+  const last = buttons[buttons.length - 1];
+  return last?.parentElement ?? header;
+}
+
+function findCodeBody(block: HTMLElement): HTMLElement {
+  const code =
+    block.querySelector<HTMLElement>("pre code") ?? block.querySelector<HTMLElement>("code");
+  if (code && !code.closest(`.${CARD_CLASS}, .${BUTTON_CLASS}`)) return code;
+
+  const header = findStickyHeader(block);
+  if (header) {
+    let sibling = header.nextElementSibling;
     while (sibling) {
       if (
         sibling instanceof HTMLElement &&
@@ -104,7 +157,7 @@ function findCodeBody(pre: HTMLElement): HTMLElement {
       sibling = sibling.nextElementSibling;
     }
   }
-  return pre;
+  return block;
 }
 
 function attachButton(toolbar: HTMLElement, pre: HTMLElement): void {
@@ -269,37 +322,62 @@ function findCardRoot(pre: HTMLElement, sourceContent: HTMLElement): HTMLElement
   return null;
 }
 
-function placeCard(pre: HTMLElement, sourceContent: HTMLElement, cardRoot: HTMLElement): void {
-  if (sourceContent !== pre) {
+function placeCard(block: HTMLElement, sourceContent: HTMLElement, cardRoot: HTMLElement): void {
+  const pane = findSourcePane(block, sourceContent);
+  if (pane) {
+    if (pane.nextElementSibling !== cardRoot) {
+      pane.insertAdjacentElement("afterend", cardRoot);
+    }
+    return;
+  }
+
+  if (sourceContent !== block) {
     if (sourceContent.nextElementSibling !== cardRoot) {
       sourceContent.insertAdjacentElement("afterend", cardRoot);
     }
     return;
   }
 
-  const sticky = findStickyHeader(pre);
+  const sticky = findStickyHeader(block);
   if (sticky && cardRoot.previousElementSibling !== sticky) {
     sticky.insertAdjacentElement("afterend", cardRoot);
     return;
   }
 
-  if (cardRoot.parentElement !== pre) {
-    pre.append(cardRoot);
+  if (cardRoot.parentElement !== block) {
+    block.append(cardRoot);
   }
 }
 
-function findStickyHeader(pre: HTMLElement): HTMLElement | null {
+function findSourcePane(block: HTMLElement, sourceContent: HTMLElement): HTMLElement | null {
+  if (sourceContent === block) return null;
+  const header = findStickyHeader(block);
+  let node: HTMLElement | null = sourceContent;
+  while (node && node.parentElement && node.parentElement !== block) {
+    node = node.parentElement;
+  }
+  if (!node || node === block || node === header || node.classList.contains(CARD_CLASS)) return null;
+  if (header && (node === header || node.contains(header))) return null;
+  return node;
+}
+
+function findStickyHeader(block: HTMLElement): HTMLElement | null {
   return (
-    pre.querySelector<HTMLElement>(":scope > .sticky") ??
-    pre.querySelector<HTMLElement>(':scope > [class*="sticky"]')
+    block.querySelector<HTMLElement>(":scope > .sticky") ??
+    block.querySelector<HTMLElement>(":scope > [class*='StickyActionBar']") ??
+    block.querySelector<HTMLElement>(":scope > [class*='sticky']") ??
+    block.querySelector<HTMLElement>(".sticky") ??
+    block.querySelector<HTMLElement>("[class*='StickyActionBar']")
   );
 }
 
-function collectSourceElements(pre: HTMLElement, sourceContent: HTMLElement, cardRoot: HTMLElement): HTMLElement[] {
-  const elements =
-    sourceContent !== pre
+function collectSourceElements(block: HTMLElement, sourceContent: HTMLElement, cardRoot: HTMLElement): HTMLElement[] {
+  const pane = findSourcePane(block, sourceContent);
+  const elements = pane
+    ? [pane]
+    : sourceContent !== block
       ? [sourceContent]
-      : Array.from(pre.children).filter((child): child is HTMLElement => {
+      : Array.from(block.children).filter((child): child is HTMLElement => {
           return (
             child instanceof HTMLElement &&
             child !== cardRoot &&

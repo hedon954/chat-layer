@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The release workflow extracts the section matching the pushed tag and uses it
 as the GitHub Release body, so each version section should be self-contained.
 
+## [v0.5.6] — 2026-10-11
+
+This patch release restores PlantUML controls and the conversation outline on
+ChatGPT's updated code-block and message markup while retaining older layouts.
+
+### Highlights
+- Detect code blocks with separate language headers and source panes.
+- Offer PlantUML rendering for plain-text blocks containing PlantUML source.
+- Restore reply outlines and preceding user previews on the updated ChatGPT UI.
+
+### Fixed
+- Hide the complete source pane when showing a diagram and preserve its toolbar.
+- Avoid duplicate outline entries from nested message markers.
+- Exclude conversation attribution headings from the outline.
+- Restore the PlantUML control when the host replaces its toolbar.
+
+### Tooling
+- Synchronize package, lockfile, and Manifest V3 versions at `0.5.6`.
+- Document the updated ChatGPT DOM integration and legacy fallback.
+
+### Install
+1. Download `chatlayer-v0.5.6.zip` from the assets below and extract it.
+2. Open `chrome://extensions/` and enable **Developer mode**.
+3. Click **Load unpacked** and select the extracted folder.
+
+### Known limitations
+- Host-page markup changes may require further integration updates.
+- Virtualized headings must re-enter the DOM for exact navigation.
+- PlantUML source is sent to the configured rendering server; choose a local or
+  self-hosted server in settings when required.
+
 ## [v0.5.5] — 2026-09-12
 
 This patch release keeps the ChatGPT and Gemini table of contents in document

@@ -23,15 +23,20 @@ independent integrations.
   contains correct line breaks.
 - Mermaid is *not* rendered natively, so we render both Mermaid and PlantUML.
 
-**ChatGPT (2026 layout)**
+**ChatGPT (`chatgpt.com`, 2026 layout)**
 
-- The whole code block (header + body) is wrapped in `<pre>`.
-- There is no `<code class="language-plantuml">`. The language label lives in
-  a sibling `<div class="…justify-self-start…">plantuml</div>` inside a
-  `sticky` header.
-- Source text inside `<pre>` is heavily tokenized into `<span>` nodes with
-  no `\n` separators. `textContent` returns one big flattened string.
-- Mermaid is rendered natively by ChatGPT; we only handle PlantUML.
+- A code block is `[data-markdown-copy="code-block"]`. The language label and
+  Copy / wrap actions live in a `sticky` header (`StickyActionBar`), and the
+  source lives in the next sibling pane as `<code>` or `<pre><code>`.
+- Older conversations can still wrap the header and body in `<pre>` with a
+  `justify-self-start` language label. Keep that path.
+- There is no `<code class="language-plantuml">`. Plain-text blocks are
+  recognized from `@start…` source. Mermaid stays native; we only add PlantUML.
+- Assistant replies are `[data-content-search-unit-key$=":assistant"]` (also
+  mirrored on `data-chatgpt-search-unit-key`) inside `[data-turn-key]`. The
+  old `[data-message-author-role]` / `conversation-turn` markers are gone.
+- Source text may still be tokenized into `<span>` nodes. Prefer `innerText`
+  when it keeps newlines, then the block-aware walk.
 
 **Resolution.** `src/content/chatgpt.ts` is a self-contained module that
 owns scanning, button placement, source extraction, and the rendering

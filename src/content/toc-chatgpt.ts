@@ -45,8 +45,18 @@ const SCAN_DEBOUNCE_MS = 300;
 const URL_CHECK_INTERVAL_MS = 1_000;
 const INITIAL_SCAN_DELAY_MS = 550;
 const USER_PREVIEW_MAX_CHARS = 160;
-const MESSAGE_ROLE_SELECTOR = "[data-message-author-role]";
+const ASSISTANT_MESSAGE_SELECTOR = [
+  '[data-message-author-role="assistant"]',
+  '[data-content-search-unit-key$=":assistant"]',
+  '[data-chatgpt-search-unit-key$=":assistant"]'
+].join(",");
+const USER_MESSAGE_SELECTOR = [
+  '[data-message-author-role="user"]',
+  '[data-content-search-unit-key$=":user"]',
+  '[data-chatgpt-search-unit-key$=":user"]'
+].join(",");
 const MESSAGE_SCROLL_TARGET_SELECTOR = [
+  "[data-turn-key]",
   "article",
   '[data-testid^="conversation-turn-"]',
   '[data-testid*="conversation-turn"]'
@@ -317,29 +327,38 @@ function collectMessages(): TocMessage[] {
   const messages: TocMessage[] = [];
   const seenScrollTargets = new Set<HTMLElement>();
 
-  for (const element of Array.from(document.querySelectorAll<HTMLElement>(MESSAGE_ROLE_SELECTOR))) {
+  for (const element of outermostMatches(document.querySelectorAll<HTMLElement>(ASSISTANT_MESSAGE_SELECTOR))) {
     if (!isAssistantMessageElement(element)) continue;
     const scrollTarget = findMessageScrollTarget(element);
     if (seenScrollTargets.has(scrollTarget)) continue;
     if (!isVisibleMessageElement(element) || !isVisibleMessageElement(scrollTarget)) continue;
 
     seenScrollTargets.add(scrollTarget);
-    const headings = collectHeadings(scrollTarget);
+    const headingRoot = element.hasAttribute("data-message-author-role") ? scrollTarget : element;
     messages.push({
       message: element,
       scrollTarget,
-      headings,
+      headings: collectHeadings(headingRoot),
       userPreview: findPrecedingUserPreview(element)
     });
   }
   return messages;
 }
 
+function outermostMatches(elements: Iterable<HTMLElement>): HTMLElement[] {
+  const list = Array.from(elements);
+  return list.filter((element) => !list.some((other) => other !== element && other.contains(element)));
+}
+
 function isAssistantMessageElement(element: HTMLElement): boolean {
-  return (
-    element.getAttribute("data-message-author-role") === "assistant" &&
-    !element.closest(`[${TOC_ATTRIBUTE}]`)
-  );
+  if (element.closest(`[${TOC_ATTRIBUTE}]`)) return false;
+  const role = element.getAttribute("data-message-author-role");
+  if (role) return role === "assistant";
+  const key =
+    element.getAttribute("data-content-search-unit-key") ??
+    element.getAttribute("data-chatgpt-search-unit-key") ??
+    "";
+  return key.endsWith(":assistant");
 }
 
 function isVisibleMessageElement(element: HTMLElement): boolean {
@@ -366,7 +385,7 @@ function collectHeadings(container: HTMLElement): TocHeading[] {
 }
 
 function isChatGptAttributionHeading(text: string): boolean {
-  return /^ChatGPT\s*(?:说|says|said)[：:]?$/iu.test(text);
+  return /^(?:ChatGPT|You)\s*(?:说|says?|said)[：:]?$/iu.test(text) || /^(?:你说|您说)[：:]?$/iu.test(text);
 }
 
 function normalizeHeadingText(text: string): string {
@@ -462,21 +481,26 @@ function readRgbLuminance(value: string): number | null {
 }
 
 function findPrecedingUserPreview(assistant: HTMLElement): string {
-  const roles = Array.from(document.querySelectorAll<HTMLElement>(MESSAGE_ROLE_SELECTOR));
-  const assistantIndex = roles.indexOf(assistant);
-  for (let index = assistantIndex - 1; index >= 0; index--) {
-    const candidate = roles[index];
-    if (candidate.getAttribute("data-message-author-role") !== "user") continue;
-    if (candidate.closest(`[${TOC_ATTRIBUTE}]`)) continue;
-    const preview = extractUserPreview(candidate);
-    if (preview) return preview;
-  }
-  return "";
+  const turn = assistant.closest<HTMLElement>("[data-turn-key]");
+  const scoped = turn ? previewBefore(turn, assistant) : "";
+  if (scoped) return scoped;
+  return previewBefore(document, assistant);
+}
+
+function previewBefore(scope: ParentNode, assistant: HTMLElement): string {
+  const users = outermostMatches(scope.querySelectorAll<HTMLElement>(USER_MESSAGE_SELECTOR)).filter(
+    (user) =>
+      user !== assistant &&
+      !user.closest(`[${TOC_ATTRIBUTE}]`) &&
+      Boolean(user.compareDocumentPosition(assistant) & Node.DOCUMENT_POSITION_FOLLOWING)
+  );
+  const candidate = users[users.length - 1];
+  return candidate ? extractUserPreview(candidate) : "";
 }
 
 function extractUserPreview(element: HTMLElement): string {
   const nodes = Array.from(
-    element.querySelectorAll<HTMLElement>(".whitespace-pre-wrap, .markdown")
+    element.querySelectorAll<HTMLElement>(".whitespace-pre-wrap, .markdown, .bg-user-message")
   );
   const chunks = nodes
     .filter((node) => !nodes.some((other) => other !== node && other.contains(node)))
